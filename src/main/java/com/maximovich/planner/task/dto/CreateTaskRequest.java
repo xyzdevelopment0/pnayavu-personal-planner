@@ -18,9 +18,6 @@ public class CreateTaskRequest {
 
     private LocalDate dueDate;
 
-    public CreateTaskRequest() {
-    }
-
     public String getTitle() {
         return title;
     }

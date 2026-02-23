@@ -41,6 +41,7 @@ public class Task {
     private LocalDateTime updatedAt;
 
     public Task() {
+        this.status = TaskStatus.TODO;
     }
 
     public Task(String title, String description, TaskStatus status, LocalDate dueDate) {
