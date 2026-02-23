@@ -1,6 +1,4 @@
-# Лабораторная: Basic REST service
-
-Тема проекта: личный планировщик задач.
+# Личный планировщик задач.
 
 Небольшой REST-сервис на Spring Boot для работы с задачами (`Task`).
 
@@ -84,3 +82,6 @@ src/main/java/com/maximovich/planner
     dto
     mapper
 ```
+## Sonar Cloud
+
+https://sonarcloud.io/component_measures?id=xyzdevelopment0_pnayavu-personal-planner&metric=duplicated_lines_density&view=list
