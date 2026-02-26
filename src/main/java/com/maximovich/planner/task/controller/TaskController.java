@@ -40,8 +40,8 @@ public class TaskController {
     @GetMapping
     public List<TaskResponse> find(
         @RequestParam(required = false) TaskStatus status,
-        @RequestParam(required = false, name = "q") String query
+        @RequestParam(required = false) String name
     ) {
-        return taskService.find(status, query);
+        return taskService.find(status, name);
     }
 }

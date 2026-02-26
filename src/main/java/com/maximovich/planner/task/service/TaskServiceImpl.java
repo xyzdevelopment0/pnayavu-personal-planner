@@ -38,27 +38,8 @@ public class TaskServiceImpl implements TaskService {
     }
 
     @Override
-    public List<TaskResponse> find(TaskStatus status, String query) {
-        List<Task> tasks;
-        if (status != null && hasText(query)) {
-            tasks = taskRepository
-                .findByStatusAndTitleContainingIgnoreCaseOrderByCreatedAtDesc(status, normalize(query));
-        } else if (status != null) {
-            tasks = taskRepository.findByStatusOrderByCreatedAtDesc(status);
-        } else if (hasText(query)) {
-            tasks = taskRepository.findByTitleContainingIgnoreCaseOrderByCreatedAtDesc(normalize(query));
-        } else {
-            tasks = taskRepository.findAllByOrderByCreatedAtDesc();
-        }
-
-        return tasks.stream().map(taskMapper::toResponse).toList();
-    }
-
-    private boolean hasText(String value) {
-        return value != null && !value.isBlank();
-    }
-
-    private String normalize(String value) {
-        return value.trim();
+    public List<TaskResponse> find(TaskStatus status, String name) {
+        String normalizedName = name == null || name.isBlank() ? null : name.trim();
+        return taskRepository.findAllByFilters(status, normalizedName).stream().map(taskMapper::toResponse).toList();
     }
 }

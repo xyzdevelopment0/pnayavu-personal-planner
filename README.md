@@ -59,15 +59,15 @@ curl http://localhost:8080/api/tasks/1
 
 ### 3) Получение списка задач с фильтрами
 
-`GET /api/tasks?status=TODO&q=lab`
+`GET /api/tasks?status=TODO&name=Finish%20lab%20work`
 
 ```bash
-curl --get "http://localhost:8080/api/tasks?status=TODO&q=lab"
+curl --get "http://localhost:8080/api/tasks?status=TODO&name=Finish%20lab%20work"
 ```
 
 Параметры:
 - `status` — `TODO`, `IN_PROGRESS`, `DONE` (необязательный)
-- `q` — поиск по заголовку (необязательный)
+- `name` — точный поиск по имени задачи (необязательный)
 
 ## Структура проекта
 

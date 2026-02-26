@@ -11,5 +11,5 @@ public interface TaskService {
 
     TaskResponse getById(Long id);
 
-    List<TaskResponse> find(TaskStatus status, String query);
+    List<TaskResponse> find(TaskStatus status, String name);
 }
