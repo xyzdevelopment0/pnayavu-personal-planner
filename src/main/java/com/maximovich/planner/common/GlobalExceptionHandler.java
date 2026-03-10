@@ -1,6 +1,7 @@
 package com.maximovich.planner.common;
 
 import java.time.LocalDateTime;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -11,10 +12,22 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-    @ExceptionHandler(TaskNotFoundException.class)
+    @ExceptionHandler(ResourceNotFoundException.class)
     @ResponseStatus(HttpStatus.NOT_FOUND)
-    public ApiErrorResponse handleTaskNotFound(TaskNotFoundException ex) {
+    public ApiErrorResponse handleNotFound(ResourceNotFoundException ex) {
         return new ApiErrorResponse(ex.getMessage(), LocalDateTime.now());
+    }
+
+    @ExceptionHandler({BusinessException.class, IllegalStateException.class})
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public ApiErrorResponse handleBusiness(RuntimeException ex) {
+        return new ApiErrorResponse(ex.getMessage(), LocalDateTime.now());
+    }
+
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    @ResponseStatus(HttpStatus.CONFLICT)
+    public ApiErrorResponse handleDataIntegrityViolation(DataIntegrityViolationException ex) {
+        return new ApiErrorResponse("Request violates database constraints", LocalDateTime.now());
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
@@ -30,7 +43,6 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public ApiErrorResponse handleMethodArgumentTypeMismatch(MethodArgumentTypeMismatchException ex) {
-        String message = "Invalid value for parameter %s".formatted(ex.getName());
-        return new ApiErrorResponse(message, LocalDateTime.now());
+        return new ApiErrorResponse("Invalid value for parameter %s".formatted(ex.getName()), LocalDateTime.now());
     }
 }

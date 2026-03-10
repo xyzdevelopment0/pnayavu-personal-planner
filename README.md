@@ -1,40 +1,191 @@
-# Личный планировщик задач.
+# Личный планировщик задач
 
-Небольшой REST-сервис на Spring Boot для работы с задачами (`Task`).
+REST-сервис на Spring Boot 3 для работы с задачами. Требования второй лабораторной по JPA реализованы внутри самого task tracker, а не отдельным учебным модулем.
+
+## Что реализовано
+
+1. Подключена реляционная БД PostgreSQL.
+2. Модель task tracker расширена до 5 сущностей:
+   - `Task`
+   - `Project`
+   - `PlannerUser`
+   - `TaskComment`
+   - `Tag`
+3. Реализованы связи:
+   - `OneToMany`: `Project -> Task`, `Task -> TaskComment`, `PlannerUser -> Project`
+   - `ManyToMany`: `Task <-> Tag`
+4. Для сущностей реализованы CRUD операции через REST API.
+5. Продемонстрирована проблема `N+1` и решение через `@EntityGraph`.
+6. Добавлен сценарий сохранения нескольких связанных сущностей с частичным сохранением без `@Transactional` и полным rollback с `@Transactional`.
+7. Добавлена ER-диаграмма с PK/FK и связями.
 
 ## Стек
 
 - Java 17
-- Spring Boot 3
+- Spring Boot 3.3.8
 - Spring Web
 - Spring Data JPA
-- H2 Database (in-memory)
+- PostgreSQL
+- Testcontainers + PostgreSQL для интеграционных тестов
 - Maven
 - Checkstyle
 
-## Как запустить
-
-Требуется: `Java 17+` и `Maven`.
+## Запуск PostgreSQL
 
 ```bash
-mvn clean spring-boot:run
+docker compose up -d
 ```
 
-После старта сервис доступен на `http://localhost:8080`.
+По умолчанию:
 
-## Проверка стиля и сборки
+- host: `localhost`
+- port: `5432`
+- db: `planner`
+- user: `planner`
+- password: `planner`
+
+Переменные окружения можно переопределить через `.env` по примеру из [`.env.example`](/Users/maximovich/personal/study/4/pnayavu/personal-planner/.env.example).
+
+## Запуск приложения
 
 ```bash
-mvn clean verify
+mvn spring-boot:run
 ```
 
-Checkstyle конфиг: `checkstyle.xml`.
+## Проверка
+
+```bash
+mvn test
+mvn verify
+```
+
+## Доменные сущности task tracker
+
+- `Task` — основная сущность приложения
+- `Project` — группирует задачи
+- `PlannerUser` — владелец проекта и исполнитель задачи
+- `TaskComment` — комментарии к задаче
+- `Tag` — метки задач
+
+## ER-диаграмма
+
+```mermaid
+erDiagram
+    PLANNER_USERS ||--o{ PROJECTS : owns
+    PLANNER_USERS ||--o{ TASKS : assigned_to
+    PLANNER_USERS ||--o{ TASK_COMMENTS : writes
+    PROJECTS ||--o{ TASKS : contains
+    TASKS ||--o{ TASK_COMMENTS : has
+    TASKS ||--o{ TASK_TAGS : linked_with
+    TAGS ||--o{ TASK_TAGS : linked_with
+
+    PLANNER_USERS {
+        bigint id PK
+        varchar name
+        varchar email UK
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    PROJECTS {
+        bigint id PK
+        varchar name
+        varchar description
+        bigint owner_id FK
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    TASKS {
+        bigint id PK
+        varchar title
+        varchar description
+        varchar status
+        date due_date
+        bigint project_id FK
+        bigint assignee_id FK
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    TASK_COMMENTS {
+        bigint id PK
+        varchar content
+        bigint task_id FK
+        bigint author_id FK
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    TAGS {
+        bigint id PK
+        varchar name UK
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    TASK_TAGS {
+        bigint task_id FK
+        bigint tag_id FK
+    }
+```
+
+## Обоснование `CascadeType` и `FetchType`
+
+### `Project -> Task`
+
+- `cascade = CascadeType.ALL`
+- `orphanRemoval = true`
+- `fetch = LAZY`
+
+Почему так:
+
+- задачи являются частью проекта;
+- при удалении проекта его задачи тоже должны удаляться;
+- список задач не нужен при каждом чтении проекта.
+
+### `Task -> TaskComment`
+
+- `cascade = CascadeType.ALL`
+- `orphanRemoval = true`
+- `fetch = LAZY`
+
+Почему так:
+
+- комментарий живёт только вместе с задачей;
+- при удалении задачи комментарии тоже должны удаляться;
+- комментарии нужно подгружать только по запросу.
+
+### `Task -> Tag`
+
+- `fetch = LAZY`
+- без каскадного удаления
+
+Почему так:
+
+- теги переиспользуются между задачами;
+- удаление задачи не должно удалять общие теги;
+- теги догружаются только в запросах, где реально нужны.
+
+### `ManyToOne` связи
+
+- `fetch = LAZY`
+- без cascade
+
+Почему так:
+
+- дочерние сущности не должны управлять жизненным циклом родительских;
+- eager для таких связей быстро раздувает граф загрузки и число SQL-запросов.
 
 ## API
 
-### 1) Создание задачи
+### Tasks
 
-`POST /api/tasks`
+- `POST /api/tasks`
+- `GET /api/tasks`
+- `GET /api/tasks/{id}`
+- `PUT /api/tasks/{id}`
+- `DELETE /api/tasks/{id}`
 
 Пример:
 
@@ -42,46 +193,74 @@ Checkstyle конфиг: `checkstyle.xml`.
 curl -X POST http://localhost:8080/api/tasks \
   -H "Content-Type: application/json" \
   -d '{
-    "title": "Finish lab work",
-    "description": "Prepare REST demo",
+    "title": "Prepare ER diagram",
+    "description": "Draw PK/FK relations",
     "status": "TODO",
-    "dueDate": "2026-03-01"
+    "dueDate": "2026-03-20",
+    "projectId": 1,
+    "assigneeId": 1,
+    "tagIds": [1, 2]
   }'
 ```
 
-### 2) Получение задачи по id
+### Projects
 
-`GET /api/tasks/{id}`
+- `POST /api/projects`
+- `GET /api/projects`
+- `GET /api/projects/{id}`
+- `PUT /api/projects/{id}`
+- `DELETE /api/projects/{id}`
 
-```bash
-curl http://localhost:8080/api/tasks/1
-```
+### Users
 
-### 3) Получение списка задач с фильтрами
+- `POST /api/users`
+- `GET /api/users`
+- `GET /api/users/{id}`
+- `PUT /api/users/{id}`
+- `DELETE /api/users/{id}`
 
-`GET /api/tasks?status=TODO&name=Finish%20lab%20work`
+### Comments
 
-```bash
-curl --get "http://localhost:8080/api/tasks?status=TODO&name=Finish%20lab%20work"
-```
+- `POST /api/comments`
+- `GET /api/comments`
+- `GET /api/comments/{id}`
+- `PUT /api/comments/{id}`
+- `DELETE /api/comments/{id}`
 
-Параметры:
-- `status` — `TODO`, `IN_PROGRESS`, `DONE` (необязательный)
-- `name` — точный поиск по имени задачи (необязательный)
+### Tags
 
-## Структура проекта
+- `POST /api/tags`
+- `GET /api/tags`
+- `GET /api/tags/{id}`
+- `PUT /api/tags/{id}`
+- `DELETE /api/tags/{id}`
 
-```text
-src/main/java/com/maximovich/planner
-  common
-  task
-    controller
-    service
-    repository
-    domain
-    dto
-    mapper
-```
-## Sonar Cloud
+## Диагностические endpoints для JPA
 
-https://sonarcloud.io/component_measures?id=xyzdevelopment0_pnayavu-personal-planner&metric=duplicated_lines_density&view=list
+Эти endpoints нужны именно для демонстрации требований лабораторной, но остаются частью task tracker.
+
+### `N+1`
+
+- `GET /api/tasks/diagnostics/n-plus-one`
+
+Сценарий:
+
+1. Загружаются проекты обычным запросом.
+2. При обращении к `project.getTasks().size()` возникает `N+1`.
+3. Затем выполняется оптимизированный запрос с `@EntityGraph(attributePaths = "tasks")`.
+4. В ответе возвращается число SQL-запросов до и после оптимизации.
+
+### Транзакции
+
+- `POST /api/tasks/diagnostics/transactions/without-transaction`
+- `POST /api/tasks/diagnostics/transactions/with-transaction`
+
+Первый endpoint показывает частичное сохранение связанных сущностей без общей транзакции. Второй показывает полный rollback той же операции внутри `@Transactional`.
+
+## Тесты
+
+Тест [TaskDiagnosticsIntegrationTest](/Users/maximovich/personal/study/4/pnayavu/personal-planner/src/test/java/com/maximovich/planner/task/diagnostics/TaskDiagnosticsIntegrationTest.java) проверяет:
+
+- уменьшение количества запросов после `@EntityGraph`
+- частичное сохранение без `@Transactional`
+- полный rollback с `@Transactional`

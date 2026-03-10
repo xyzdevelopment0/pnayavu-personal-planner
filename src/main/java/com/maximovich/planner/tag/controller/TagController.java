@@ -1,8 +1,8 @@
-package com.maximovich.planner.task.controller;
+package com.maximovich.planner.tag.controller;
 
-import com.maximovich.planner.task.dto.CreateTaskRequest;
-import com.maximovich.planner.task.dto.TaskResponse;
-import com.maximovich.planner.task.service.TaskService;
+import com.maximovich.planner.tag.dto.TagRequest;
+import com.maximovich.planner.tag.dto.TagResponse;
+import com.maximovich.planner.tag.service.TagService;
 import jakarta.validation.Valid;
 import java.util.List;
 import org.springframework.http.HttpStatus;
@@ -17,39 +17,39 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/api/tasks")
-public class TaskController {
+@RequestMapping("/api/tags")
+public class TagController {
 
-    private final TaskService taskService;
+    private final TagService tagService;
 
-    public TaskController(TaskService taskService) {
-        this.taskService = taskService;
+    public TagController(TagService tagService) {
+        this.tagService = tagService;
     }
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public TaskResponse create(@Valid @RequestBody CreateTaskRequest request) {
-        return taskService.create(request);
+    public TagResponse create(@Valid @RequestBody TagRequest request) {
+        return tagService.create(request);
     }
 
     @GetMapping("/{id}")
-    public TaskResponse getById(@PathVariable Long id) {
-        return taskService.getById(id);
+    public TagResponse getById(@PathVariable Long id) {
+        return tagService.getById(id);
     }
 
     @GetMapping
-    public List<TaskResponse> findAll() {
-        return taskService.findAll();
+    public List<TagResponse> findAll() {
+        return tagService.findAll();
     }
 
     @PutMapping("/{id}")
-    public TaskResponse update(@PathVariable Long id, @Valid @RequestBody CreateTaskRequest request) {
-        return taskService.update(id, request);
+    public TagResponse update(@PathVariable Long id, @Valid @RequestBody TagRequest request) {
+        return tagService.update(id, request);
     }
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void delete(@PathVariable Long id) {
-        taskService.delete(id);
+        tagService.delete(id);
     }
 }

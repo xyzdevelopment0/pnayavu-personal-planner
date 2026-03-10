@@ -1,6 +1,5 @@
 package com.maximovich.planner.task.service;
 
-import com.maximovich.planner.task.domain.TaskStatus;
 import com.maximovich.planner.task.dto.CreateTaskRequest;
 import com.maximovich.planner.task.dto.TaskResponse;
 import java.util.List;
@@ -11,5 +10,9 @@ public interface TaskService {
 
     TaskResponse getById(Long id);
 
-    List<TaskResponse> find(TaskStatus status, String name);
+    List<TaskResponse> findAll();
+
+    TaskResponse update(Long id, CreateTaskRequest request);
+
+    void delete(Long id);
 }

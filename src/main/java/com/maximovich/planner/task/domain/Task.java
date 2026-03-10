@@ -1,25 +1,31 @@
 package com.maximovich.planner.task.domain;
 
+import com.maximovich.planner.comment.domain.TaskComment;
+import com.maximovich.planner.common.domain.BaseEntity;
+import com.maximovich.planner.project.domain.Project;
+import com.maximovich.planner.tag.domain.Tag;
+import com.maximovich.planner.user.domain.PlannerUser;
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.PrePersist;
-import jakarta.persistence.PreUpdate;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.JoinTable;
+import jakarta.persistence.ManyToMany;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Set;
 
 @Entity
 @Table(name = "tasks")
-public class Task {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+public class Task extends BaseEntity {
 
     @Column(nullable = false, length = 120)
     private String title;
@@ -34,79 +40,121 @@ public class Task {
     @Column(name = "due_date")
     private LocalDate dueDate;
 
-    @Column(name = "created_at", nullable = false, updatable = false)
-    private LocalDateTime createdAt;
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "project_id", nullable = false)
+    private Project project;
 
-    @Column(name = "updated_at", nullable = false)
-    private LocalDateTime updatedAt;
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "assignee_id", nullable = false)
+    private PlannerUser assignee;
 
-    public Task() {
-        this.status = TaskStatus.TODO;
+    @OneToMany(mappedBy = "task", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    private List<TaskComment> comments = new ArrayList<>();
+
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(
+        name = "task_tags",
+        joinColumns = @JoinColumn(name = "task_id"),
+        inverseJoinColumns = @JoinColumn(name = "tag_id")
+    )
+    private Set<Tag> tags = new LinkedHashSet<>();
+
+    protected Task() {
     }
 
-    public Task(String title, String description, TaskStatus status, LocalDate dueDate) {
+    public Task(
+        String title,
+        String description,
+        TaskStatus status,
+        LocalDate dueDate,
+        Project project,
+        PlannerUser assignee
+    ) {
         this.title = title;
         this.description = description;
-        this.status = status;
+        this.status = status == null ? TaskStatus.TODO : status;
         this.dueDate = dueDate;
+        this.project = project;
+        this.assignee = assignee;
     }
 
-    @PrePersist
-    public void onCreate() {
-        if (status == null) {
-            status = TaskStatus.TODO;
+    public void update(
+        String title,
+        String description,
+        TaskStatus status,
+        LocalDate dueDate,
+        Project project,
+        PlannerUser assignee
+    ) {
+        this.title = title;
+        this.description = description;
+        this.status = status == null ? TaskStatus.TODO : status;
+        this.dueDate = dueDate;
+        this.project = project;
+        this.assignee = assignee;
+    }
+
+    public void replaceTags(Set<Tag> newTags) {
+        Set<Tag> existingTags = new LinkedHashSet<>(tags);
+        existingTags.forEach(this::removeTag);
+        newTags.forEach(this::addTag);
+    }
+
+    public void addTag(Tag tag) {
+        if (tags.add(tag)) {
+            tag.getTasks().add(this);
         }
-        LocalDateTime now = LocalDateTime.now();
-        createdAt = now;
-        updatedAt = now;
     }
 
-    @PreUpdate
-    public void onUpdate() {
-        updatedAt = LocalDateTime.now();
+    public void removeTag(Tag tag) {
+        if (tags.remove(tag)) {
+            tag.getTasks().remove(this);
+        }
     }
 
-    public Long getId() {
-        return id;
+    public void addComment(TaskComment comment) {
+        comments.add(comment);
+        comment.setTask(this);
+    }
+
+    public void removeComment(TaskComment comment) {
+        comments.remove(comment);
+        comment.setTask(null);
     }
 
     public String getTitle() {
         return title;
     }
 
-    public void setTitle(String title) {
-        this.title = title;
-    }
-
     public String getDescription() {
         return description;
-    }
-
-    public void setDescription(String description) {
-        this.description = description;
     }
 
     public TaskStatus getStatus() {
         return status;
     }
 
-    public void setStatus(TaskStatus status) {
-        this.status = status;
-    }
-
     public LocalDate getDueDate() {
         return dueDate;
     }
 
-    public void setDueDate(LocalDate dueDate) {
-        this.dueDate = dueDate;
+    public Project getProject() {
+        return project;
     }
 
-    public LocalDateTime getCreatedAt() {
-        return createdAt;
+    public void setProject(Project project) {
+        this.project = project;
     }
 
-    public LocalDateTime getUpdatedAt() {
-        return updatedAt;
+    public PlannerUser getAssignee() {
+        return assignee;
+    }
+
+    public List<TaskComment> getComments() {
+        return comments;
+    }
+
+    public Set<Tag> getTags() {
+        return tags;
     }
 }
