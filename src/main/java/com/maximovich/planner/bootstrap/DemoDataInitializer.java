@@ -1,16 +1,16 @@
 package com.maximovich.planner.bootstrap;
 
-import com.maximovich.planner.comment.domain.TaskComment;
-import com.maximovich.planner.comment.repository.TaskCommentRepository;
-import com.maximovich.planner.project.domain.Project;
-import com.maximovich.planner.project.repository.ProjectRepository;
-import com.maximovich.planner.tag.domain.Tag;
-import com.maximovich.planner.tag.repository.TagRepository;
-import com.maximovich.planner.task.domain.Task;
-import com.maximovich.planner.task.domain.TaskStatus;
-import com.maximovich.planner.task.repository.TaskRepository;
-import com.maximovich.planner.user.domain.User;
-import com.maximovich.planner.user.repository.UserRepository;
+import com.maximovich.planner.entities.TaskComment;
+import com.maximovich.planner.repositories.TaskCommentRepository;
+import com.maximovich.planner.entities.Project;
+import com.maximovich.planner.repositories.ProjectRepository;
+import com.maximovich.planner.entities.Tag;
+import com.maximovich.planner.repositories.TagRepository;
+import com.maximovich.planner.entities.Task;
+import com.maximovich.planner.entities.TaskStatus;
+import com.maximovich.planner.repositories.TaskRepository;
+import com.maximovich.planner.entities.User;
+import com.maximovich.planner.repositories.UserRepository;
 import java.time.LocalDate;
 import java.util.List;
 import org.springframework.boot.ApplicationArguments;
