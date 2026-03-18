@@ -1,5 +1,7 @@
 # Личный планировщик задач
 
+[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=xyzdevelopment0_pnayavu-personal-planner&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=xyzdevelopment0_pnayavu-personal-planner&branch=main)
+
 REST-сервис на Spring Boot 3 для работы с задачами. Требования второй лабораторной по JPA реализованы внутри самого task tracker, а не отдельным учебным модулем.
 
 ## Что реализовано
