@@ -9,8 +9,8 @@ import com.maximovich.planner.tag.repository.TagRepository;
 import com.maximovich.planner.task.domain.Task;
 import com.maximovich.planner.task.domain.TaskStatus;
 import com.maximovich.planner.task.repository.TaskRepository;
-import com.maximovich.planner.user.domain.PlannerUser;
-import com.maximovich.planner.user.repository.PlannerUserRepository;
+import com.maximovich.planner.user.domain.User;
+import com.maximovich.planner.user.repository.UserRepository;
 import java.time.LocalDate;
 import java.util.List;
 import org.springframework.boot.ApplicationArguments;
@@ -22,20 +22,20 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 public class DemoDataInitializer implements ApplicationRunner {
 
-    private final PlannerUserRepository plannerUserRepository;
+    private final UserRepository userRepository;
     private final ProjectRepository projectRepository;
     private final TaskRepository taskRepository;
     private final TaskCommentRepository taskCommentRepository;
     private final TagRepository tagRepository;
 
     public DemoDataInitializer(
-        PlannerUserRepository plannerUserRepository,
+        UserRepository userRepository,
         ProjectRepository projectRepository,
         TaskRepository taskRepository,
         TaskCommentRepository taskCommentRepository,
         TagRepository tagRepository
     ) {
-        this.plannerUserRepository = plannerUserRepository;
+        this.userRepository = userRepository;
         this.projectRepository = projectRepository;
         this.taskRepository = taskRepository;
         this.taskCommentRepository = taskCommentRepository;
@@ -44,12 +44,12 @@ public class DemoDataInitializer implements ApplicationRunner {
 
     @Override
     public void run(ApplicationArguments args) {
-        if (plannerUserRepository.count() > 0) {
+        if (userRepository.count() > 0) {
             return;
         }
 
-        PlannerUser alice = plannerUserRepository.save(new PlannerUser("Alice Novak", "alice@example.com"));
-        PlannerUser bob = plannerUserRepository.save(new PlannerUser("Bob Stone", "bob@example.com"));
+        User alice = userRepository.save(new User("Alice Novak", "alice@example.com"));
+        User bob = userRepository.save(new User("Bob Stone", "bob@example.com"));
 
         Tag backend = tagRepository.save(new Tag("backend"));
         Tag study = tagRepository.save(new Tag("study"));

@@ -2,7 +2,7 @@ package com.maximovich.planner.comment.domain;
 
 import com.maximovich.planner.common.domain.BaseEntity;
 import com.maximovich.planner.task.domain.Task;
-import com.maximovich.planner.user.domain.PlannerUser;
+import com.maximovich.planner.user.domain.User;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -23,18 +23,18 @@ public class TaskComment extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "author_id", nullable = false)
-    private PlannerUser author;
+    private User author;
 
     protected TaskComment() {
     }
 
-    public TaskComment(String content, Task task, PlannerUser author) {
+    public TaskComment(String content, Task task, User author) {
         this.content = content;
         this.task = task;
         this.author = author;
     }
 
-    public void update(String content, Task task, PlannerUser author) {
+    public void update(String content, Task task, User author) {
         this.content = content;
         this.task = task;
         this.author = author;
@@ -52,7 +52,7 @@ public class TaskComment extends BaseEntity {
         this.task = task;
     }
 
-    public PlannerUser getAuthor() {
+    public User getAuthor() {
         return author;
     }
 }

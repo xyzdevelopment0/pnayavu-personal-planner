@@ -1,8 +1,8 @@
 package com.maximovich.planner.user.controller;
 
-import com.maximovich.planner.user.dto.PlannerUserRequest;
-import com.maximovich.planner.user.dto.PlannerUserResponse;
-import com.maximovich.planner.user.service.PlannerUserService;
+import com.maximovich.planner.user.dto.UserRequest;
+import com.maximovich.planner.user.dto.UserResponse;
+import com.maximovich.planner.user.service.UserService;
 import jakarta.validation.Valid;
 import java.util.List;
 import org.springframework.http.HttpStatus;
@@ -18,38 +18,38 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/users")
-public class PlannerUserController {
+public class UserController {
 
-    private final PlannerUserService plannerUserService;
+    private final UserService userService;
 
-    public PlannerUserController(PlannerUserService plannerUserService) {
-        this.plannerUserService = plannerUserService;
+    public UserController(UserService userService) {
+        this.userService = userService;
     }
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public PlannerUserResponse create(@Valid @RequestBody PlannerUserRequest request) {
-        return plannerUserService.create(request);
+    public UserResponse create(@Valid @RequestBody UserRequest request) {
+        return userService.create(request);
     }
 
     @GetMapping("/{id}")
-    public PlannerUserResponse getById(@PathVariable Long id) {
-        return plannerUserService.getById(id);
+    public UserResponse getById(@PathVariable Long id) {
+        return userService.getById(id);
     }
 
     @GetMapping
-    public List<PlannerUserResponse> findAll() {
-        return plannerUserService.findAll();
+    public List<UserResponse> findAll() {
+        return userService.findAll();
     }
 
     @PutMapping("/{id}")
-    public PlannerUserResponse update(@PathVariable Long id, @Valid @RequestBody PlannerUserRequest request) {
-        return plannerUserService.update(id, request);
+    public UserResponse update(@PathVariable Long id, @Valid @RequestBody UserRequest request) {
+        return userService.update(id, request);
     }
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void delete(@PathVariable Long id) {
-        plannerUserService.delete(id);
+        userService.delete(id);
     }
 }

@@ -11,8 +11,8 @@ import com.maximovich.planner.task.dto.CreateTaskRequest;
 import com.maximovich.planner.task.dto.TaskResponse;
 import com.maximovich.planner.task.mapper.TaskMapper;
 import com.maximovich.planner.task.repository.TaskRepository;
-import com.maximovich.planner.user.domain.PlannerUser;
-import com.maximovich.planner.user.repository.PlannerUserRepository;
+import com.maximovich.planner.user.domain.User;
+import com.maximovich.planner.user.repository.UserRepository;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
@@ -25,20 +25,20 @@ public class TaskServiceImpl implements TaskService {
 
     private final TaskRepository taskRepository;
     private final ProjectRepository projectRepository;
-    private final PlannerUserRepository plannerUserRepository;
+    private final UserRepository userRepository;
     private final TagRepository tagRepository;
     private final TaskMapper taskMapper;
 
     public TaskServiceImpl(
         TaskRepository taskRepository,
         ProjectRepository projectRepository,
-        PlannerUserRepository plannerUserRepository,
+        UserRepository userRepository,
         TagRepository tagRepository,
         TaskMapper taskMapper
     ) {
         this.taskRepository = taskRepository;
         this.projectRepository = projectRepository;
-        this.plannerUserRepository = plannerUserRepository;
+        this.userRepository = userRepository;
         this.tagRepository = tagRepository;
         this.taskMapper = taskMapper;
     }
@@ -104,8 +104,8 @@ public class TaskServiceImpl implements TaskService {
             .orElseThrow(() -> new ResourceNotFoundException("Project", projectId));
     }
 
-    private PlannerUser getAssignee(Long assigneeId) {
-        return plannerUserRepository.findById(assigneeId)
+    private User getAssignee(Long assigneeId) {
+        return userRepository.findById(assigneeId)
             .orElseThrow(() -> new ResourceNotFoundException("User", assigneeId));
     }
 

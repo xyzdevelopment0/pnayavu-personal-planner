@@ -2,7 +2,7 @@ package com.maximovich.planner.project.domain;
 
 import com.maximovich.planner.common.domain.BaseEntity;
 import com.maximovich.planner.task.domain.Task;
-import com.maximovich.planner.user.domain.PlannerUser;
+import com.maximovich.planner.user.domain.User;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -26,7 +26,7 @@ public class Project extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "owner_id", nullable = false)
-    private PlannerUser owner;
+    private User owner;
 
     @OneToMany(mappedBy = "project", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private List<Task> tasks = new ArrayList<>();
@@ -34,13 +34,13 @@ public class Project extends BaseEntity {
     protected Project() {
     }
 
-    public Project(String name, String description, PlannerUser owner) {
+    public Project(String name, String description, User owner) {
         this.name = name;
         this.description = description;
         this.owner = owner;
     }
 
-    public void update(String name, String description, PlannerUser owner) {
+    public void update(String name, String description, User owner) {
         this.name = name;
         this.description = description;
         this.owner = owner;
@@ -64,7 +64,7 @@ public class Project extends BaseEntity {
         return description;
     }
 
-    public PlannerUser getOwner() {
+    public User getOwner() {
         return owner;
     }
 

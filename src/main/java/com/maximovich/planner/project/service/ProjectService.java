@@ -5,8 +5,8 @@ import com.maximovich.planner.project.domain.Project;
 import com.maximovich.planner.project.dto.ProjectRequest;
 import com.maximovich.planner.project.dto.ProjectResponse;
 import com.maximovich.planner.project.repository.ProjectRepository;
-import com.maximovich.planner.user.domain.PlannerUser;
-import com.maximovich.planner.user.repository.PlannerUserRepository;
+import com.maximovich.planner.user.domain.User;
+import com.maximovich.planner.user.repository.UserRepository;
 import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -16,11 +16,11 @@ import org.springframework.transaction.annotation.Transactional;
 public class ProjectService {
 
     private final ProjectRepository projectRepository;
-    private final PlannerUserRepository plannerUserRepository;
+    private final UserRepository userRepository;
 
-    public ProjectService(ProjectRepository projectRepository, PlannerUserRepository plannerUserRepository) {
+    public ProjectService(ProjectRepository projectRepository, UserRepository userRepository) {
         this.projectRepository = projectRepository;
-        this.plannerUserRepository = plannerUserRepository;
+        this.userRepository = userRepository;
     }
 
     @Transactional
@@ -61,8 +61,8 @@ public class ProjectService {
         return projectRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Project", id));
     }
 
-    private PlannerUser getOwner(Long ownerId) {
-        return plannerUserRepository.findById(ownerId)
+    private User getOwner(Long ownerId) {
+        return userRepository.findById(ownerId)
             .orElseThrow(() -> new ResourceNotFoundException("User", ownerId));
     }
 

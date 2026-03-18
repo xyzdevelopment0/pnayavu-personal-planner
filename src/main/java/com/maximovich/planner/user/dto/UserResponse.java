@@ -1,9 +1,9 @@
 package com.maximovich.planner.user.dto;
 
-import com.maximovich.planner.user.domain.PlannerUser;
+import com.maximovich.planner.user.domain.User;
 import java.time.LocalDateTime;
 
-public record PlannerUserResponse(
+public record UserResponse(
     Long id,
     String name,
     String email,
@@ -11,8 +11,8 @@ public record PlannerUserResponse(
     LocalDateTime updatedAt
 ) {
 
-    public static PlannerUserResponse fromEntity(PlannerUser user) {
-        return new PlannerUserResponse(
+    public static UserResponse fromEntity(User user) {
+        return new UserResponse(
             user.getId(),
             user.getName(),
             user.getEmail(),

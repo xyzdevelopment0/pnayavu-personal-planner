@@ -10,11 +10,11 @@ REST-сервис на Spring Boot 3 для работы с задачами. Т
 2. Модель task tracker расширена до 5 сущностей:
    - `Task`
    - `Project`
-   - `PlannerUser`
+   - `User`
    - `TaskComment`
    - `Tag`
 3. Реализованы связи:
-   - `OneToMany`: `Project -> Task`, `Task -> TaskComment`, `PlannerUser -> Project`
+   - `OneToMany`: `Project -> Task`, `Task -> TaskComment`, `User -> Project`
    - `ManyToMany`: `Task <-> Tag`
 4. Для сущностей реализованы CRUD операции через REST API.
 5. Продемонстрирована проблема `N+1` и решение через `@EntityGraph`.
@@ -65,7 +65,7 @@ mvn verify
 
 - `Task` — основная сущность приложения
 - `Project` — группирует задачи
-- `PlannerUser` — владелец проекта и исполнитель задачи
+- `User` — владелец проекта и исполнитель задачи
 - `TaskComment` — комментарии к задаче
 - `Tag` — метки задач
 
@@ -73,15 +73,15 @@ mvn verify
 
 ```mermaid
 erDiagram
-    PLANNER_USERS ||--o{ PROJECTS : owns
-    PLANNER_USERS ||--o{ TASKS : assigned_to
-    PLANNER_USERS ||--o{ TASK_COMMENTS : writes
+    USERS ||--o{ PROJECTS : owns
+    USERS ||--o{ TASKS : assigned_to
+    USERS ||--o{ TASK_COMMENTS : writes
     PROJECTS ||--o{ TASKS : contains
     TASKS ||--o{ TASK_COMMENTS : has
     TASKS ||--o{ TASK_TAGS : linked_with
     TAGS ||--o{ TASK_TAGS : linked_with
 
-    PLANNER_USERS {
+    USERS {
         bigint id PK
         varchar name
         varchar email UK
@@ -102,7 +102,7 @@ erDiagram
         bigint id PK
         varchar title
         varchar description
-        varchar status
+        enum task_status
         date due_date
         bigint project_id FK
         bigint assignee_id FK

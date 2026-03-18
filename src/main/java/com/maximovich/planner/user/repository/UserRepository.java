@@ -1,12 +1,12 @@
 package com.maximovich.planner.user.repository;
 
-import com.maximovich.planner.user.domain.PlannerUser;
+import com.maximovich.planner.user.domain.User;
 import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;
 
-public interface PlannerUserRepository extends JpaRepository<PlannerUser, Long> {
+public interface UserRepository extends JpaRepository<User, Long> {
 
-    List<PlannerUser> findAllByOrderByIdAsc();
+    List<User> findAllByOrderByIdAsc();
 
     boolean existsByEmailIgnoreCase(String email);
 

@@ -4,7 +4,7 @@ import com.maximovich.planner.comment.domain.TaskComment;
 import com.maximovich.planner.common.domain.BaseEntity;
 import com.maximovich.planner.project.domain.Project;
 import com.maximovich.planner.tag.domain.Tag;
-import com.maximovich.planner.user.domain.PlannerUser;
+import com.maximovich.planner.user.domain.User;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -22,6 +22,8 @@ import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 @Entity
 @Table(name = "tasks")
@@ -34,7 +36,8 @@ public class Task extends BaseEntity {
     private String description;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 20)
+    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
+    @Column(nullable = false)
     private TaskStatus status;
 
     @Column(name = "due_date")
@@ -46,7 +49,7 @@ public class Task extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "assignee_id", nullable = false)
-    private PlannerUser assignee;
+    private User assignee;
 
     @OneToMany(mappedBy = "task", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private List<TaskComment> comments = new ArrayList<>();
@@ -68,7 +71,7 @@ public class Task extends BaseEntity {
         TaskStatus status,
         LocalDate dueDate,
         Project project,
-        PlannerUser assignee
+        User assignee
     ) {
         this.title = title;
         this.description = description;
@@ -84,7 +87,7 @@ public class Task extends BaseEntity {
         TaskStatus status,
         LocalDate dueDate,
         Project project,
-        PlannerUser assignee
+        User assignee
     ) {
         this.title = title;
         this.description = description;
@@ -146,7 +149,7 @@ public class Task extends BaseEntity {
         this.project = project;
     }
 
-    public PlannerUser getAssignee() {
+    public User getAssignee() {
         return assignee;
     }
 

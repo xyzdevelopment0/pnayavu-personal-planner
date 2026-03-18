@@ -13,13 +13,13 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Entity
-@Table(name = "planner_users")
-public class PlannerUser extends BaseEntity {
+@Table(name = "users")
+public class User extends BaseEntity {
 
     @Column(nullable = false, length = 80)
     private String name;
 
-    @Column(nullable = false, unique = true, length = 120)
+    @Column(nullable = false, unique = true)
     private String email;
 
     @OneToMany(mappedBy = "owner", fetch = FetchType.LAZY)
@@ -31,10 +31,10 @@ public class PlannerUser extends BaseEntity {
     @OneToMany(mappedBy = "author", fetch = FetchType.LAZY)
     private List<TaskComment> comments = new ArrayList<>();
 
-    protected PlannerUser() {
+    protected User() {
     }
 
-    public PlannerUser(String name, String email) {
+    public User(String name, String email) {
         this.name = name;
         this.email = email;
     }

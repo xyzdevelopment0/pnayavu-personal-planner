@@ -7,8 +7,8 @@ import com.maximovich.planner.comment.repository.TaskCommentRepository;
 import com.maximovich.planner.common.ResourceNotFoundException;
 import com.maximovich.planner.task.domain.Task;
 import com.maximovich.planner.task.repository.TaskRepository;
-import com.maximovich.planner.user.domain.PlannerUser;
-import com.maximovich.planner.user.repository.PlannerUserRepository;
+import com.maximovich.planner.user.domain.User;
+import com.maximovich.planner.user.repository.UserRepository;
 import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,16 +19,16 @@ public class TaskCommentService {
 
     private final TaskCommentRepository taskCommentRepository;
     private final TaskRepository taskRepository;
-    private final PlannerUserRepository plannerUserRepository;
+    private final UserRepository userRepository;
 
     public TaskCommentService(
         TaskCommentRepository taskCommentRepository,
         TaskRepository taskRepository,
-        PlannerUserRepository plannerUserRepository
+        UserRepository userRepository
     ) {
         this.taskCommentRepository = taskCommentRepository;
         this.taskRepository = taskRepository;
-        this.plannerUserRepository = plannerUserRepository;
+        this.userRepository = userRepository;
     }
 
     @Transactional
@@ -74,8 +74,8 @@ public class TaskCommentService {
         return taskRepository.findById(taskId).orElseThrow(() -> new ResourceNotFoundException("Task", taskId));
     }
 
-    private PlannerUser getAuthor(Long authorId) {
-        return plannerUserRepository.findById(authorId)
+    private User getAuthor(Long authorId) {
+        return userRepository.findById(authorId)
             .orElseThrow(() -> new ResourceNotFoundException("User", authorId));
     }
 }
