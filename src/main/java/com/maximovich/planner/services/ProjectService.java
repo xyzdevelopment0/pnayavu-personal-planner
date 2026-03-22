@@ -7,6 +7,7 @@ import com.maximovich.planner.dtos.ProjectResponse;
 import com.maximovich.planner.repositories.ProjectRepository;
 import com.maximovich.planner.entities.User;
 import com.maximovich.planner.repositories.UserRepository;
+import com.maximovich.planner.services.tasksearch.TaskSearchIndex;
 import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -17,10 +18,16 @@ public class ProjectService {
 
     private final ProjectRepository projectRepository;
     private final UserRepository userRepository;
+    private final TaskSearchIndex taskSearchIndex;
 
-    public ProjectService(ProjectRepository projectRepository, UserRepository userRepository) {
+    public ProjectService(
+        ProjectRepository projectRepository,
+        UserRepository userRepository,
+        TaskSearchIndex taskSearchIndex
+    ) {
         this.projectRepository = projectRepository;
         this.userRepository = userRepository;
+        this.taskSearchIndex = taskSearchIndex;
     }
 
     @Transactional
@@ -30,7 +37,9 @@ public class ProjectService {
             trimDescription(request.description()),
             getOwner(request.ownerId())
         );
-        return ProjectResponse.fromEntity(projectRepository.save(project));
+        ProjectResponse response = ProjectResponse.fromEntity(projectRepository.save(project));
+        taskSearchIndex.clear();
+        return response;
     }
 
     public ProjectResponse getById(Long id) {
@@ -49,12 +58,15 @@ public class ProjectService {
             trimDescription(request.description()),
             getOwner(request.ownerId())
         );
-        return ProjectResponse.fromEntity(project);
+        ProjectResponse response = ProjectResponse.fromEntity(project);
+        taskSearchIndex.clear();
+        return response;
     }
 
     @Transactional
     public void delete(Long id) {
         projectRepository.delete(getEntity(id));
+        taskSearchIndex.clear();
     }
 
     private Project getEntity(Long id) {

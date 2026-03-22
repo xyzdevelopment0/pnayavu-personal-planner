@@ -20,6 +20,8 @@ REST-сервис на Spring Boot 3 для работы с задачами. Т
 5. Продемонстрирована проблема `N+1` и решение через `@EntityGraph`.
 6. Добавлен сценарий сохранения нескольких связанных сущностей с частичным сохранением без `@Transactional` и полным rollback с `@Transactional`.
 7. Добавлена ER-диаграмма с PK/FK и связями.
+8. Добавлены сложные GET-запросы по `Task` с фильтрацией по вложенным сущностям через JPQL и native query.
+9. Для поисковых запросов добавлены пагинация `Pageable`, in-memory индекс на `HashMap` и инвалидация кеша при изменении данных.
 
 ## Стек
 
@@ -185,6 +187,8 @@ erDiagram
 
 - `POST /api/tasks`
 - `GET /api/tasks`
+- `GET /api/tasks/search/jpql`
+- `GET /api/tasks/search/native`
 - `GET /api/tasks/{id}`
 - `PUT /api/tasks/{id}`
 - `DELETE /api/tasks/{id}`
@@ -204,6 +208,14 @@ curl -X POST http://localhost:8080/api/tasks \
     "tagIds": [1, 2]
   }'
 ```
+
+Пример поиска с фильтрацией по вложенным полям `project.name` и `project.owner.email`, пагинацией и индикатором кеша:
+
+```bash
+curl -i "http://localhost:8080/api/tasks/search/jpql?projectName=laboratory&ownerEmail=alice@example.com&status=TODO&page=0&size=1"
+```
+
+В ответе будет заголовок `X-Task-Search-Cache` со значением `MISS` или `HIT`.
 
 ### Projects
 

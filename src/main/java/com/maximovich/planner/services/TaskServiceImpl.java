@@ -1,21 +1,30 @@
 package com.maximovich.planner.services;
 
+import com.maximovich.planner.dtos.CachedTaskSearchResult;
+import com.maximovich.planner.dtos.CreateTaskRequest;
+import com.maximovich.planner.dtos.TaskResponse;
 import com.maximovich.planner.exceptions.BusinessException;
 import com.maximovich.planner.exceptions.ResourceNotFoundException;
 import com.maximovich.planner.entities.Project;
-import com.maximovich.planner.repositories.ProjectRepository;
 import com.maximovich.planner.entities.Tag;
-import com.maximovich.planner.repositories.TagRepository;
 import com.maximovich.planner.entities.Task;
-import com.maximovich.planner.dtos.CreateTaskRequest;
-import com.maximovich.planner.dtos.TaskResponse;
+import com.maximovich.planner.entities.TaskStatus;
 import com.maximovich.planner.mappers.TaskMapper;
+import com.maximovich.planner.repositories.ProjectRepository;
+import com.maximovich.planner.repositories.TagRepository;
 import com.maximovich.planner.repositories.TaskRepository;
 import com.maximovich.planner.entities.User;
 import com.maximovich.planner.repositories.UserRepository;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
+import com.maximovich.planner.services.tasksearch.TaskSearchCacheKey;
+import com.maximovich.planner.services.tasksearch.TaskSearchIndex;
+import com.maximovich.planner.services.tasksearch.TaskSearchStrategy;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -28,19 +37,22 @@ public class TaskServiceImpl implements TaskService {
     private final UserRepository userRepository;
     private final TagRepository tagRepository;
     private final TaskMapper taskMapper;
+    private final TaskSearchIndex taskSearchIndex;
 
     public TaskServiceImpl(
         TaskRepository taskRepository,
         ProjectRepository projectRepository,
         UserRepository userRepository,
         TagRepository tagRepository,
-        TaskMapper taskMapper
+        TaskMapper taskMapper,
+        TaskSearchIndex taskSearchIndex
     ) {
         this.taskRepository = taskRepository;
         this.projectRepository = projectRepository;
         this.userRepository = userRepository;
         this.tagRepository = tagRepository;
         this.taskMapper = taskMapper;
+        this.taskSearchIndex = taskSearchIndex;
     }
 
     @Override
@@ -55,7 +67,9 @@ public class TaskServiceImpl implements TaskService {
             getAssignee(request.assigneeId())
         );
         task.replaceTags(getTags(request.tagIds()));
-        return taskMapper.toResponse(taskRepository.save(task));
+        TaskResponse response = taskMapper.toResponse(taskRepository.save(task));
+        taskSearchIndex.clear();
+        return response;
     }
 
     @Override
@@ -66,6 +80,26 @@ public class TaskServiceImpl implements TaskService {
     @Override
     public List<TaskResponse> findAll() {
         return taskRepository.findAllWithRelations().stream().map(taskMapper::toResponse).toList();
+    }
+
+    @Override
+    public CachedTaskSearchResult searchWithJpql(
+        String projectName,
+        String ownerEmail,
+        TaskStatus status,
+        Pageable pageable
+    ) {
+        return search(TaskSearchStrategy.JPQL, projectName, ownerEmail, status, pageable);
+    }
+
+    @Override
+    public CachedTaskSearchResult searchWithNative(
+        String projectName,
+        String ownerEmail,
+        TaskStatus status,
+        Pageable pageable
+    ) {
+        return search(TaskSearchStrategy.NATIVE, projectName, ownerEmail, status, pageable);
     }
 
     @Override
@@ -81,13 +115,16 @@ public class TaskServiceImpl implements TaskService {
             getAssignee(request.assigneeId())
         );
         task.replaceTags(getTags(request.tagIds()));
-        return taskMapper.toResponse(getEntityWithRelations(id));
+        TaskResponse response = taskMapper.toResponse(getEntityWithRelations(id));
+        taskSearchIndex.clear();
+        return response;
     }
 
     @Override
     @Transactional
     public void delete(Long id) {
         taskRepository.delete(getEntity(id));
+        taskSearchIndex.clear();
     }
 
     private Task getEntity(Long id) {
@@ -123,5 +160,60 @@ public class TaskServiceImpl implements TaskService {
 
     private String trimDescription(String description) {
         return description == null ? null : description.trim();
+    }
+
+    private CachedTaskSearchResult search(
+        TaskSearchStrategy strategy,
+        String projectName,
+        String ownerEmail,
+        TaskStatus status,
+        Pageable pageable
+    ) {
+        Pageable normalizedPageable = normalizePageable(pageable);
+        String normalizedProjectName = normalizeText(projectName);
+        String normalizedOwnerEmail = normalizeText(ownerEmail);
+        TaskSearchCacheKey key = new TaskSearchCacheKey(
+            strategy,
+            normalizedProjectName,
+            normalizedOwnerEmail,
+            status,
+            normalizedPageable.getPageNumber(),
+            normalizedPageable.getPageSize()
+        );
+        Page<TaskResponse> cachedPage = taskSearchIndex.get(key).orElse(null);
+        if (cachedPage != null) {
+            return new CachedTaskSearchResult(cachedPage, true);
+        }
+        Page<Long> taskIdsPage = strategy == TaskSearchStrategy.JPQL
+            ? taskRepository.searchIdsWithJpql(normalizedProjectName, normalizedOwnerEmail, status, normalizedPageable)
+            : taskRepository.searchIdsWithNative(
+                normalizedProjectName,
+                normalizedOwnerEmail,
+                status == null ? null : status.name(),
+                normalizedPageable
+            );
+        List<TaskResponse> content = taskIdsPage.hasContent()
+            ? taskRepository.findByIdInOrderByIdAsc(taskIdsPage.getContent())
+                .stream()
+                .map(taskMapper::toResponse)
+                .toList()
+            : List.of();
+        Page<TaskResponse> page = new PageImpl<>(content, normalizedPageable, taskIdsPage.getTotalElements());
+        taskSearchIndex.put(key, page);
+        return new CachedTaskSearchResult(page, false);
+    }
+
+    private Pageable normalizePageable(Pageable pageable) {
+        int page = pageable == null ? 0 : Math.max(pageable.getPageNumber(), 0);
+        int size = pageable == null ? 10 : Math.min(Math.max(pageable.getPageSize(), 1), 50);
+        return PageRequest.of(page, size);
+    }
+
+    private String normalizeText(String value) {
+        if (value == null) {
+            return null;
+        }
+        String normalized = value.trim();
+        return normalized.isEmpty() ? null : normalized;
     }
 }

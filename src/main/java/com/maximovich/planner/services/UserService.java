@@ -9,6 +9,7 @@ import com.maximovich.planner.entities.User;
 import com.maximovich.planner.dtos.UserRequest;
 import com.maximovich.planner.dtos.UserResponse;
 import com.maximovich.planner.repositories.UserRepository;
+import com.maximovich.planner.services.tasksearch.TaskSearchIndex;
 import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,17 +22,20 @@ public class UserService {
     private final ProjectRepository projectRepository;
     private final TaskRepository taskRepository;
     private final TaskCommentRepository taskCommentRepository;
+    private final TaskSearchIndex taskSearchIndex;
 
     public UserService(
         UserRepository userRepository,
         ProjectRepository projectRepository,
         TaskRepository taskRepository,
-        TaskCommentRepository taskCommentRepository
+        TaskCommentRepository taskCommentRepository,
+        TaskSearchIndex taskSearchIndex
     ) {
         this.userRepository = userRepository;
         this.projectRepository = projectRepository;
         this.taskRepository = taskRepository;
         this.taskCommentRepository = taskCommentRepository;
+        this.taskSearchIndex = taskSearchIndex;
     }
 
     @Transactional
@@ -41,7 +45,9 @@ public class UserService {
             throw new BusinessException("User with email %s already exists".formatted(email));
         }
         User user = new User(request.name().trim(), email);
-        return UserResponse.fromEntity(userRepository.save(user));
+        UserResponse response = UserResponse.fromEntity(userRepository.save(user));
+        taskSearchIndex.clear();
+        return response;
     }
 
     public UserResponse getById(Long id) {
@@ -60,7 +66,9 @@ public class UserService {
             throw new BusinessException("User with email %s already exists".formatted(email));
         }
         user.update(request.name().trim(), email);
-        return UserResponse.fromEntity(user);
+        UserResponse response = UserResponse.fromEntity(user);
+        taskSearchIndex.clear();
+        return response;
     }
 
     @Transactional
@@ -76,6 +84,7 @@ public class UserService {
             throw new BusinessException("User %d has comments and cannot be deleted".formatted(id));
         }
         userRepository.delete(user);
+        taskSearchIndex.clear();
     }
 
     private User getEntity(Long id) {
