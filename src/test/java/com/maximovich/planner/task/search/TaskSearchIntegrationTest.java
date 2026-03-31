@@ -2,12 +2,12 @@ package com.maximovich.planner.task.search;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.maximovich.planner.components.TaskSearchIndex;
 import com.maximovich.planner.dtos.CreateTaskRequest;
 import com.maximovich.planner.dtos.TaskResponse;
 import com.maximovich.planner.entities.TaskStatus;
 import com.maximovich.planner.repositories.TaskRepository;
 import com.maximovich.planner.services.TaskService;
-import com.maximovich.planner.services.tasksearch.TaskSearchIndex;
 import java.util.LinkedHashSet;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

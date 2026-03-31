@@ -13,6 +13,11 @@ spring:
         format_sql: true
         generate_statistics: true
 
+logging:
+  level:
+    org.hibernate.SQL: DEBUG
+    org.hibernate.orm.jdbc.bind: TRACE
+
 server:
   error:
     include-message: always

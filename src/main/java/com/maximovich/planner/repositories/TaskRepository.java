@@ -33,8 +33,8 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
             from Task t
             join t.project p
             join p.owner o
-            where (:projectName is null or lower(p.name) like lower(concat('%', :projectName, '%')))
-              and (:ownerEmail is null or lower(o.email) = lower(:ownerEmail))
+            where lower(p.name) like :projectPattern
+              and (:ownerEmail is null or lower(o.email) = :ownerEmail)
               and (:status is null or t.status = :status)
             order by t.id
             """,
@@ -43,13 +43,13 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
             from Task t
             join t.project p
             join p.owner o
-            where (:projectName is null or lower(p.name) like lower(concat('%', :projectName, '%')))
-              and (:ownerEmail is null or lower(o.email) = lower(:ownerEmail))
+            where lower(p.name) like :projectPattern
+              and (:ownerEmail is null or lower(o.email) = :ownerEmail)
               and (:status is null or t.status = :status)
             """
     )
     Page<Long> searchIdsWithJpql(
-        @Param("projectName") String projectName,
+        @Param("projectPattern") String projectPattern,
         @Param("ownerEmail") String ownerEmail,
         @Param("status") TaskStatus status,
         Pageable pageable
@@ -61,8 +61,8 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
             from tasks t
             join projects p on p.id = t.project_id
             join users u on u.id = p.owner_id
-            where (:projectName is null or p.name ilike concat('%', :projectName, '%'))
-              and (:ownerEmail is null or lower(u.email) = lower(:ownerEmail))
+            where lower(p.name) like :projectPattern
+              and (:ownerEmail is null or lower(u.email) = :ownerEmail)
               and (:status is null or cast(t.status as varchar) = :status)
             order by t.id
             """,
@@ -71,14 +71,14 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
             from tasks t
             join projects p on p.id = t.project_id
             join users u on u.id = p.owner_id
-            where (:projectName is null or p.name ilike concat('%', :projectName, '%'))
-              and (:ownerEmail is null or lower(u.email) = lower(:ownerEmail))
+            where lower(p.name) like :projectPattern
+              and (:ownerEmail is null or lower(u.email) = :ownerEmail)
               and (:status is null or cast(t.status as varchar) = :status)
             """,
         nativeQuery = true
     )
     Page<Long> searchIdsWithNative(
-        @Param("projectName") String projectName,
+        @Param("projectPattern") String projectPattern,
         @Param("ownerEmail") String ownerEmail,
         @Param("status") String status,
         Pageable pageable

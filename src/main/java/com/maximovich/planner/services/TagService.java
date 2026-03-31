@@ -1,5 +1,6 @@
 package com.maximovich.planner.services;
 
+import com.maximovich.planner.components.TaskSearchIndex;
 import com.maximovich.planner.exceptions.BusinessException;
 import com.maximovich.planner.exceptions.ResourceNotFoundException;
 import com.maximovich.planner.entities.Tag;
@@ -7,7 +8,6 @@ import com.maximovich.planner.dtos.TagRequest;
 import com.maximovich.planner.dtos.TagResponse;
 import com.maximovich.planner.repositories.TagRepository;
 import com.maximovich.planner.entities.Task;
-import com.maximovich.planner.services.tasksearch.TaskSearchIndex;
 import java.util.LinkedHashSet;
 import java.util.List;
 import org.springframework.stereotype.Service;

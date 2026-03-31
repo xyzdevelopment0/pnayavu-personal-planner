@@ -1,5 +1,6 @@
 package com.maximovich.planner.services;
 
+import com.maximovich.planner.components.TaskSearchIndex;
 import com.maximovich.planner.repositories.TaskCommentRepository;
 import com.maximovich.planner.exceptions.BusinessException;
 import com.maximovich.planner.exceptions.ResourceNotFoundException;
@@ -9,7 +10,6 @@ import com.maximovich.planner.entities.User;
 import com.maximovich.planner.dtos.UserRequest;
 import com.maximovich.planner.dtos.UserResponse;
 import com.maximovich.planner.repositories.UserRepository;
-import com.maximovich.planner.services.tasksearch.TaskSearchIndex;
 import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
