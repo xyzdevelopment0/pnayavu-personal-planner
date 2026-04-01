@@ -178,7 +178,7 @@ public class TaskService {
             return new CachedTaskSearchResult(cachedPage, true);
         }
         Page<Long> taskIdsPage = strategy == TaskSearchIndex.Strategy.JPQL
-            ? taskRepository.searchIdsWithJpql(projectPattern, normalizedOwnerEmail, status, normalizedPageable)
+            ? searchIdsWithJpql(projectPattern, normalizedOwnerEmail, status, normalizedPageable)
             : taskRepository.searchIdsWithNative(
                 projectPattern,
                 normalizedOwnerEmail,
@@ -200,6 +200,18 @@ public class TaskService {
         int page = pageable == null ? 0 : Math.max(pageable.getPageNumber(), 0);
         int size = pageable == null ? 10 : Math.min(Math.max(pageable.getPageSize(), 1), 50);
         return PageRequest.of(page, size);
+    }
+
+    private Page<Long> searchIdsWithJpql(
+        String projectPattern,
+        String ownerEmail,
+        TaskStatus status,
+        Pageable pageable
+    ) {
+        if (status == null) {
+            return taskRepository.searchIdsWithJpqlWithoutStatus(projectPattern, ownerEmail, pageable);
+        }
+        return taskRepository.searchIdsWithJpql(projectPattern, ownerEmail, status, pageable);
     }
 
     private String normalizeText(String value) {

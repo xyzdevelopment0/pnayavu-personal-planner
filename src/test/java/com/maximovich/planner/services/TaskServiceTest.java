@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
@@ -58,10 +59,9 @@ class TaskServiceTest {
     void shouldNormalizeSearchParamsAndReuseCacheAcrossCaseVariations() {
         Pageable pageable = PageRequest.of(0, 10);
 
-        when(taskRepository.searchIdsWithJpql(
+        when(taskRepository.searchIdsWithJpqlWithoutStatus(
             eq("%laboratory%"),
             eq("alice@example.com"),
-            isNull(),
             argThat(value -> value != null && value.getPageNumber() == 0 && value.getPageSize() == 10)
         )).thenReturn(new PageImpl<>(List.of(), pageable, 0));
 
@@ -71,7 +71,12 @@ class TaskServiceTest {
         assertThat(first.cached()).isFalse();
         assertThat(second.cached()).isTrue();
 
-        verify(taskRepository, times(1)).searchIdsWithJpql(
+        verify(taskRepository, times(1)).searchIdsWithJpqlWithoutStatus(
+            eq("%laboratory%"),
+            eq("alice@example.com"),
+            argThat(value -> value != null && value.getPageNumber() == 0 && value.getPageSize() == 10)
+        );
+        verify(taskRepository, never()).searchIdsWithJpql(
             eq("%laboratory%"),
             eq("alice@example.com"),
             isNull(),

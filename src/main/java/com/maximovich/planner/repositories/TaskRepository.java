@@ -35,7 +35,7 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
             join p.owner o
             where lower(p.name) like :projectPattern
               and (:ownerEmail is null or lower(o.email) = :ownerEmail)
-              and (:status is null or t.status = :status)
+              and t.status = :status
             order by t.id
             """,
         countQuery = """
@@ -45,13 +45,38 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
             join p.owner o
             where lower(p.name) like :projectPattern
               and (:ownerEmail is null or lower(o.email) = :ownerEmail)
-              and (:status is null or t.status = :status)
+              and t.status = :status
             """
     )
     Page<Long> searchIdsWithJpql(
         @Param("projectPattern") String projectPattern,
         @Param("ownerEmail") String ownerEmail,
         @Param("status") TaskStatus status,
+        Pageable pageable
+    );
+
+    @Query(
+        value = """
+            select t.id
+            from Task t
+            join t.project p
+            join p.owner o
+            where lower(p.name) like :projectPattern
+              and (:ownerEmail is null or lower(o.email) = :ownerEmail)
+            order by t.id
+            """,
+        countQuery = """
+            select count(t.id)
+            from Task t
+            join t.project p
+            join p.owner o
+            where lower(p.name) like :projectPattern
+              and (:ownerEmail is null or lower(o.email) = :ownerEmail)
+            """
+    )
+    Page<Long> searchIdsWithJpqlWithoutStatus(
+        @Param("projectPattern") String projectPattern,
+        @Param("ownerEmail") String ownerEmail,
         Pageable pageable
     );
 
