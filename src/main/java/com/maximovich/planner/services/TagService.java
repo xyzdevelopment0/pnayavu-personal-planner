@@ -10,6 +10,7 @@ import com.maximovich.planner.repositories.TagRepository;
 import com.maximovich.planner.entities.Task;
 import java.util.LinkedHashSet;
 import java.util.List;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -29,7 +30,7 @@ public class TagService {
     public TagResponse create(TagRequest request) {
         String name = normalizeName(request.name());
         if (tagRepository.existsByNameIgnoreCase(name)) {
-            throw new BusinessException("Tag %s already exists".formatted(name));
+            throw new BusinessException(HttpStatus.CONFLICT, "Tag %s already exists".formatted(name));
         }
         TagResponse response = TagResponse.fromEntity(tagRepository.save(new Tag(name)));
         taskSearchIndex.clear();
@@ -49,7 +50,7 @@ public class TagService {
         Tag tag = getEntity(id);
         String name = normalizeName(request.name());
         if (tagRepository.existsByNameIgnoreCaseAndIdNot(name, id)) {
-            throw new BusinessException("Tag %s already exists".formatted(name));
+            throw new BusinessException(HttpStatus.CONFLICT, "Tag %s already exists".formatted(name));
         }
         tag.update(name);
         TagResponse response = TagResponse.fromEntity(tag);

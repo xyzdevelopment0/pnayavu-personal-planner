@@ -1,48 +1,288 @@
 package com.maximovich.planner.exceptions;
 
-import java.time.LocalDateTime;
+import com.fasterxml.jackson.databind.JsonMappingException.Reference;
+import com.fasterxml.jackson.databind.exc.InvalidFormatException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.ConstraintViolationException;
+import java.util.List;
+import java.util.Objects;
+import java.util.stream.Collectors;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.validation.FieldError;
+import org.springframework.validation.method.ParameterValidationResult;
+import org.springframework.web.HttpMediaTypeNotSupportedException;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
+import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
-import org.springframework.web.bind.annotation.ResponseStatus;
-import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.HandlerMethodValidationException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.servlet.NoHandlerFoundException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
-@RestControllerAdvice
+@ControllerAdvice
 public class GlobalExceptionHandler {
 
+    private static final Logger LOG = LoggerFactory.getLogger(GlobalExceptionHandler.class);
+
     @ExceptionHandler(ResourceNotFoundException.class)
-    @ResponseStatus(HttpStatus.NOT_FOUND)
-    public ApiErrorResponse handleNotFound(ResourceNotFoundException ex) {
-        return new ApiErrorResponse(ex.getMessage(), LocalDateTime.now());
+    public ResponseEntity<ApiErrorResponse> handleNotFound(
+        ResourceNotFoundException ex,
+        HttpServletRequest request
+    ) {
+        LOG.warn("Resource not found: {}", ex.getMessage());
+        return buildResponse(
+            HttpStatus.NOT_FOUND,
+            ApiErrorCode.RESOURCE_NOT_FOUND,
+            ex.getMessage(),
+            request
+        );
     }
 
-    @ExceptionHandler({BusinessException.class, IllegalStateException.class})
-    @ResponseStatus(HttpStatus.BAD_REQUEST)
-    public ApiErrorResponse handleBusiness(RuntimeException ex) {
-        return new ApiErrorResponse(ex.getMessage(), LocalDateTime.now());
+    @ExceptionHandler(BusinessException.class)
+    public ResponseEntity<ApiErrorResponse> handleBusiness(
+        BusinessException ex,
+        HttpServletRequest request
+    ) {
+        LOG.warn("Business rule violated: {}", ex.getMessage());
+        return buildResponse(
+            ex.getStatus(),
+            ApiErrorCode.BUSINESS_RULE_VIOLATION,
+            ex.getMessage(),
+            request
+        );
     }
 
-    @ExceptionHandler(DataIntegrityViolationException.class)
-    @ResponseStatus(HttpStatus.CONFLICT)
-    public ApiErrorResponse handleDataIntegrityViolation(DataIntegrityViolationException ex) {
-        return new ApiErrorResponse("Request violates database constraints", LocalDateTime.now());
+    @ExceptionHandler(IllegalStateException.class)
+    public ResponseEntity<ApiErrorResponse> handleIllegalState(
+        IllegalStateException ex,
+        HttpServletRequest request
+    ) {
+        LOG.warn("Illegal state: {}", ex.getMessage());
+        return buildResponse(
+            HttpStatus.BAD_REQUEST,
+            ApiErrorCode.BUSINESS_RULE_VIOLATION,
+            ex.getMessage(),
+            request
+        );
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    @ResponseStatus(HttpStatus.BAD_REQUEST)
-    public ApiErrorResponse handleMethodArgumentNotValid(MethodArgumentNotValidException ex) {
-        String message = ex.getBindingResult().getFieldErrors().stream()
-            .findFirst()
-            .map(error -> "%s %s".formatted(error.getField(), error.getDefaultMessage()))
-            .orElse("Validation failed");
-        return new ApiErrorResponse(message, LocalDateTime.now());
+    public ResponseEntity<ApiErrorResponse> handleMethodArgumentNotValid(
+        MethodArgumentNotValidException ex,
+        HttpServletRequest request
+    ) {
+        List<ApiFieldError> details = ex.getBindingResult().getFieldErrors().stream()
+            .map(this::toFieldError)
+            .toList();
+        LOG.warn("Request body validation failed: {}", details);
+        return buildResponse(
+            HttpStatus.BAD_REQUEST,
+            ApiErrorCode.VALIDATION_ERROR,
+            "Request validation failed",
+            request,
+            details
+        );
+    }
+
+    @ExceptionHandler(HandlerMethodValidationException.class)
+    public ResponseEntity<ApiErrorResponse> handleHandlerMethodValidation(
+        HandlerMethodValidationException ex,
+        HttpServletRequest request
+    ) {
+        List<ApiFieldError> details = ex.getAllValidationResults().stream()
+            .flatMap(result -> result.getResolvableErrors().stream()
+                .map(error -> new ApiFieldError(resolveParameterName(result), error.getDefaultMessage())))
+            .toList();
+        LOG.warn("Handler method validation failed: {}", details);
+        return buildResponse(
+            HttpStatus.BAD_REQUEST,
+            ApiErrorCode.VALIDATION_ERROR,
+            "Request validation failed",
+            request,
+            details
+        );
+    }
+
+    @ExceptionHandler(ConstraintViolationException.class)
+    public ResponseEntity<ApiErrorResponse> handleConstraintViolation(
+        ConstraintViolationException ex,
+        HttpServletRequest request
+    ) {
+        List<ApiFieldError> details = ex.getConstraintViolations().stream()
+            .map(violation -> new ApiFieldError(violation.getPropertyPath().toString(), violation.getMessage()))
+            .toList();
+        LOG.warn("Constraint violation: {}", details);
+        return buildResponse(
+            HttpStatus.BAD_REQUEST,
+            ApiErrorCode.VALIDATION_ERROR,
+            "Request validation failed",
+            request,
+            details
+        );
     }
 
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
-    @ResponseStatus(HttpStatus.BAD_REQUEST)
-    public ApiErrorResponse handleMethodArgumentTypeMismatch(MethodArgumentTypeMismatchException ex) {
-        return new ApiErrorResponse("Invalid value for parameter %s".formatted(ex.getName()), LocalDateTime.now());
+    public ResponseEntity<ApiErrorResponse> handleMethodArgumentTypeMismatch(
+        MethodArgumentTypeMismatchException ex,
+        HttpServletRequest request
+    ) {
+        LOG.warn("Parameter type mismatch for {}: {}", ex.getName(), ex.getValue());
+        return buildResponse(
+            HttpStatus.BAD_REQUEST,
+            ApiErrorCode.INVALID_REQUEST,
+            "Invalid value for parameter %s".formatted(ex.getName()),
+            request,
+            List.of(new ApiFieldError(ex.getName(), "Invalid value"))
+        );
+    }
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ApiErrorResponse> handleHttpMessageNotReadable(
+        HttpMessageNotReadableException ex,
+        HttpServletRequest request
+    ) {
+        if (ex.getCause() instanceof InvalidFormatException invalidFormatException) {
+            String fieldPath = invalidFormatException.getPath().stream()
+                .map(Reference::getFieldName)
+                .filter(Objects::nonNull)
+                .collect(Collectors.joining("."));
+            LOG.warn("Invalid JSON value for {}: {}", fieldPath, invalidFormatException.getValue());
+            return buildResponse(
+                HttpStatus.BAD_REQUEST,
+                ApiErrorCode.INVALID_REQUEST,
+                "Invalid value for field %s".formatted(fieldPath),
+                request,
+                List.of(new ApiFieldError(fieldPath, "Invalid value"))
+            );
+        }
+        LOG.warn("Malformed JSON request: {}", ex.getMessage());
+        return buildResponse(
+            HttpStatus.BAD_REQUEST,
+            ApiErrorCode.INVALID_REQUEST,
+            "Malformed JSON request",
+            request
+        );
+    }
+
+    @ExceptionHandler(MissingServletRequestParameterException.class)
+    public ResponseEntity<ApiErrorResponse> handleMissingServletRequestParameter(
+        MissingServletRequestParameterException ex,
+        HttpServletRequest request
+    ) {
+        LOG.warn("Missing request parameter: {}", ex.getParameterName());
+        return buildResponse(
+            HttpStatus.BAD_REQUEST,
+            ApiErrorCode.INVALID_REQUEST,
+            "Missing required parameter %s".formatted(ex.getParameterName()),
+            request,
+            List.of(new ApiFieldError(ex.getParameterName(), "Parameter is required"))
+        );
+    }
+
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ApiErrorResponse> handleDataIntegrityViolation(
+        DataIntegrityViolationException ex,
+        HttpServletRequest request
+    ) {
+        LOG.warn("Database constraint violation: {}", ex.getMostSpecificCause().getMessage());
+        return buildResponse(
+            HttpStatus.CONFLICT,
+            ApiErrorCode.DATA_INTEGRITY_VIOLATION,
+            "Request violates database constraints",
+            request
+        );
+    }
+
+    @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+    public ResponseEntity<ApiErrorResponse> handleHttpRequestMethodNotSupported(
+        HttpRequestMethodNotSupportedException ex,
+        HttpServletRequest request
+    ) {
+        LOG.warn("Method not allowed: {}", ex.getMethod());
+        return buildResponse(
+            HttpStatus.METHOD_NOT_ALLOWED,
+            ApiErrorCode.METHOD_NOT_ALLOWED,
+            "HTTP method %s is not supported for this endpoint".formatted(ex.getMethod()),
+            request
+        );
+    }
+
+    @ExceptionHandler(HttpMediaTypeNotSupportedException.class)
+    public ResponseEntity<ApiErrorResponse> handleHttpMediaTypeNotSupported(
+        HttpMediaTypeNotSupportedException ex,
+        HttpServletRequest request
+    ) {
+        String contentType = ex.getContentType() == null ? "unknown" : ex.getContentType().toString();
+        LOG.warn("Unsupported media type: {}", contentType);
+        return buildResponse(
+            HttpStatus.UNSUPPORTED_MEDIA_TYPE,
+            ApiErrorCode.UNSUPPORTED_MEDIA_TYPE,
+            "Content type %s is not supported".formatted(contentType),
+            request
+        );
+    }
+
+    @ExceptionHandler({NoHandlerFoundException.class, NoResourceFoundException.class})
+    public ResponseEntity<ApiErrorResponse> handleNoHandlerFound(
+        Exception ex,
+        HttpServletRequest request
+    ) {
+        LOG.warn("Endpoint not found: {}", request.getRequestURI());
+        return buildResponse(
+            HttpStatus.NOT_FOUND,
+            ApiErrorCode.ENDPOINT_NOT_FOUND,
+            "Endpoint %s was not found".formatted(request.getRequestURI()),
+            request
+        );
+    }
+
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<ApiErrorResponse> handleUnhandledException(
+        Exception ex,
+        HttpServletRequest request
+    ) {
+        LOG.error("Unhandled exception", ex);
+        return buildResponse(
+            HttpStatus.INTERNAL_SERVER_ERROR,
+            ApiErrorCode.INTERNAL_ERROR,
+            "Unexpected server error",
+            request
+        );
+    }
+
+    private ResponseEntity<ApiErrorResponse> buildResponse(
+        HttpStatus status,
+        ApiErrorCode code,
+        String message,
+        HttpServletRequest request
+    ) {
+        return buildResponse(status, code, message, request, List.of());
+    }
+
+    private ResponseEntity<ApiErrorResponse> buildResponse(
+        HttpStatus status,
+        ApiErrorCode code,
+        String message,
+        HttpServletRequest request,
+        List<ApiFieldError> details
+    ) {
+        return ResponseEntity.status(status)
+            .body(ApiErrorResponse.of(status, code, message, request.getRequestURI(), details));
+    }
+
+    private ApiFieldError toFieldError(FieldError error) {
+        return new ApiFieldError(error.getField(), error.getDefaultMessage());
+    }
+
+    private String resolveParameterName(ParameterValidationResult result) {
+        String parameterName = result.getMethodParameter().getParameterName();
+        return parameterName == null ? "parameter" : parameterName;
     }
 }

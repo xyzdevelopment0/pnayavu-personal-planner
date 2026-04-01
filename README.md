@@ -2,7 +2,7 @@
 
 [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=xyzdevelopment0_pnayavu-personal-planner&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=xyzdevelopment0_pnayavu-personal-planner&branch=main)
 
-REST-сервис на Spring Boot 3 для работы с задачами. Требования второй лабораторной по JPA реализованы внутри самого task tracker, а не отдельным учебным модулем.
+REST-сервис на Spring Boot 3 для работы с задачами. Лабораторные требования наращиваются внутри одного реального task tracker, а не в виде отдельных учебных заготовок.
 
 ## Что реализовано
 
@@ -22,6 +22,12 @@ REST-сервис на Spring Boot 3 для работы с задачами. Т
 7. Добавлена ER-диаграмма с PK/FK и связями.
 8. Добавлены сложные GET-запросы по `Task` с фильтрацией по вложенным сущностям через JPQL и native query.
 9. Для поисковых запросов добавлены пагинация `Pageable`, in-memory индекс на `HashMap` и инвалидация кеша при изменении данных.
+10. Добавлена глобальная обработка ошибок через `@ControllerAdvice`.
+11. Добавлена валидация входных данных через `@Valid` и bean validation для path/query параметров.
+12. Для всех endpoint настроен единый JSON-формат ошибки.
+13. Логирование переведено на `logback` с уровнями логов и ротацией файлов.
+14. Добавлен AOP-аспект для логирования времени выполнения сервисных методов.
+15. Подключен Swagger UI с описанием endpoint и DTO.
 
 ## Стек
 
@@ -29,7 +35,9 @@ REST-сервис на Spring Boot 3 для работы с задачами. Т
 - Spring Boot 3.3.8
 - Spring Web
 - Spring Data JPA
+- Spring AOP
 - PostgreSQL
+- Springdoc Swagger UI
 - Testcontainers + PostgreSQL для интеграционных тестов
 - Maven
 - Checkstyle
@@ -55,6 +63,18 @@ docker compose up -d
 ```bash
 mvn spring-boot:run
 ```
+
+## Swagger
+
+- Swagger UI: `http://localhost:8080/swagger-ui/index.html`
+- JSON-спецификация: `http://localhost:8080/v3/api-docs`
+
+## Логи
+
+- текущий лог-файл: `logs/personal-planner.log`
+- архивы логов: `logs/archive/`
+
+Ротация настроена по дате и размеру файла. Уровни логирования и лимиты можно переопределить через переменные окружения `ROOT_LOG_LEVEL`, `APP_LOG_LEVEL`, `SQL_LOG_LEVEL`, `SQL_BIND_LOG_LEVEL`, `LOG_MAX_FILE_SIZE`, `LOG_MAX_HISTORY`.
 
 ## Проверка
 
@@ -216,6 +236,27 @@ curl -i "http://localhost:8080/api/tasks/search/jpql?projectName=laboratory&owne
 ```
 
 В ответе будет заголовок `X-Task-Search-Cache` со значением `MISS` или `HIT`.
+
+## Формат ошибки
+
+Все ошибки API возвращаются в одном формате:
+
+```json
+{
+  "timestamp": "2026-04-01T18:42:31.123",
+  "status": 400,
+  "error": "Bad Request",
+  "code": "VALIDATION_ERROR",
+  "message": "Request validation failed",
+  "path": "/api/users",
+  "details": [
+    {
+      "field": "email",
+      "message": "must be a well-formed email address"
+    }
+  ]
+}
+```
 
 ### Projects
 

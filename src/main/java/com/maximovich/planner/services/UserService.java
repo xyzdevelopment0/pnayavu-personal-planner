@@ -11,6 +11,7 @@ import com.maximovich.planner.dtos.UserRequest;
 import com.maximovich.planner.dtos.UserResponse;
 import com.maximovich.planner.repositories.UserRepository;
 import java.util.List;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -42,7 +43,7 @@ public class UserService {
     public UserResponse create(UserRequest request) {
         String email = normalizeEmail(request.email());
         if (userRepository.existsByEmailIgnoreCase(email)) {
-            throw new BusinessException("User with email %s already exists".formatted(email));
+            throw new BusinessException(HttpStatus.CONFLICT, "User with email %s already exists".formatted(email));
         }
         User user = new User(request.name().trim(), email);
         UserResponse response = UserResponse.fromEntity(userRepository.save(user));
@@ -63,7 +64,7 @@ public class UserService {
         User user = getEntity(id);
         String email = normalizeEmail(request.email());
         if (userRepository.existsByEmailIgnoreCaseAndIdNot(email, id)) {
-            throw new BusinessException("User with email %s already exists".formatted(email));
+            throw new BusinessException(HttpStatus.CONFLICT, "User with email %s already exists".formatted(email));
         }
         user.update(request.name().trim(), email);
         UserResponse response = UserResponse.fromEntity(user);
@@ -75,13 +76,22 @@ public class UserService {
     public void delete(Long id) {
         User user = getEntity(id);
         if (projectRepository.existsByOwnerId(id)) {
-            throw new BusinessException("User %d owns projects and cannot be deleted".formatted(id));
+            throw new BusinessException(
+                HttpStatus.CONFLICT,
+                "User %d owns projects and cannot be deleted".formatted(id)
+            );
         }
         if (taskRepository.existsByAssigneeId(id)) {
-            throw new BusinessException("User %d is assigned to tasks and cannot be deleted".formatted(id));
+            throw new BusinessException(
+                HttpStatus.CONFLICT,
+                "User %d is assigned to tasks and cannot be deleted".formatted(id)
+            );
         }
         if (taskCommentRepository.existsByAuthorId(id)) {
-            throw new BusinessException("User %d has comments and cannot be deleted".formatted(id));
+            throw new BusinessException(
+                HttpStatus.CONFLICT,
+                "User %d has comments and cannot be deleted".formatted(id)
+            );
         }
         userRepository.delete(user);
         taskSearchIndex.clear();

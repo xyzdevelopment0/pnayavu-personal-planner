@@ -1,0 +1,13 @@
+package com.maximovich.planner.exceptions;
+
+public enum ApiErrorCode {
+    VALIDATION_ERROR,
+    RESOURCE_NOT_FOUND,
+    BUSINESS_RULE_VIOLATION,
+    DATA_INTEGRITY_VIOLATION,
+    INVALID_REQUEST,
+    METHOD_NOT_ALLOWED,
+    UNSUPPORTED_MEDIA_TYPE,
+    ENDPOINT_NOT_FOUND,
+    INTERNAL_ERROR
+}
