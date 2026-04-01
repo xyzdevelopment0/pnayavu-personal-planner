@@ -16,6 +16,8 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
 
     boolean existsByAssigneeId(Long assigneeId);
 
+    long countByTitleContainingIgnoreCase(String titleFragment);
+
     @EntityGraph(attributePaths = {"project", "assignee", "tags"})
     @Query("select distinct t from Task t where t.id = :id")
     Optional<Task> findByIdWithRelations(@Param("id") Long id);

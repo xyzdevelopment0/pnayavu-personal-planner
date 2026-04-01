@@ -12,6 +12,8 @@ public interface ProjectRepository extends JpaRepository<Project, Long> {
 
     boolean existsByOwnerId(Long ownerId);
 
+    long countByNameContainingIgnoreCase(String nameFragment);
+
     @EntityGraph(attributePaths = "tasks")
     @Query("select distinct p from Project p order by p.id")
     List<Project> findAllWithTasks();

@@ -292,30 +292,62 @@ curl -i "http://localhost:8080/api/tasks/search/jpql?projectName=laboratory&owne
 
 ## Диагностические endpoints для JPA
 
-Эти endpoints нужны именно для демонстрации требований лабораторной, но остаются частью task tracker.
-
-### `N+1`
-
-- `GET /api/tasks/diagnostics/n-plus-one`
-
-Сценарий:
-
-1. Загружаются проекты обычным запросом.
-2. При обращении к `project.getTasks().size()` возникает `N+1`.
-3. Затем выполняется оптимизированный запрос с `@EntityGraph(attributePaths = "tasks")`.
-4. В ответе возвращается число SQL-запросов до и после оптимизации.
+Эти endpoints нужны для наглядной демонстрации поведения транзакций на реальных вставках в PostgreSQL.
 
 ### Транзакции
 
 - `POST /api/tasks/diagnostics/transactions/without-transaction`
 - `POST /api/tasks/diagnostics/transactions/with-transaction`
 
-Первый endpoint показывает частичное сохранение связанных сущностей без общей транзакции. Второй показывает полный rollback той же операции внутри `@Transactional`.
+Оба endpoint запускают один и тот же сценарий:
+
+1. создаётся пользователь
+2. создаётся проект
+3. создаётся задача
+4. операция завершается исключением
+
+Разница только в transactional-границе:
+
+- `without-transaction` выполняет шаги без общей `@Transactional`, поэтому `users`, `projects` и `tasks` успевают сохраниться
+- `with-transaction` выполняет те же шаги внутри общей `@Transactional`, поэтому после исключения все вставки откатываются
+
+В ответе возвращается:
+
+- `marker` для поиска строк в БД
+- `rollbackApplied` чтобы сразу увидеть, был ли rollback
+- `persistedUsers`, `persistedProjects`, `persistedTasks`, `persistedComments` чтобы сравнить итоговое состояние
+
+Как увидеть это в БД:
+
+1. Подними Postgres: `docker compose up -d`
+2. Запусти приложение
+3. Вызови один из endpoints, например:
+
+```bash
+curl -X POST http://localhost:8080/api/tasks/diagnostics/transactions/without-transaction
+```
+
+4. Скопируй `marker` из ответа
+5. Открой PostgreSQL:
+
+```bash
+docker exec -it personal-planner-postgres psql -U planner -d planner
+```
+
+6. Выполни запросы с этим `marker`:
+
+```sql
+select id, name, email from users where email ilike '%' || '<marker>' || '%';
+select id, name from projects where name ilike '%' || '<marker>' || '%';
+select id, title from tasks where title ilike '%' || '<marker>' || '%';
+select id, content from task_comments where content ilike '%' || '<marker>' || '%';
+```
+
+Для `without-transaction` ты увидишь строки в `users`, `projects` и `tasks`. Для `with-transaction` все четыре запроса вернут пустой результат.
 
 ## Тесты
 
 Тест [TaskDiagnosticsIntegrationTest](/Users/maximovich/personal/study/4/pnayavu/personal-planner/src/test/java/com/maximovich/planner/task/diagnostics/TaskDiagnosticsIntegrationTest.java) проверяет:
 
-- уменьшение количества запросов после `@EntityGraph`
 - частичное сохранение без `@Transactional`
 - полный rollback с `@Transactional`

@@ -12,6 +12,8 @@ public interface TaskCommentRepository extends JpaRepository<TaskComment, Long> 
 
     boolean existsByAuthorId(Long authorId);
 
+    long countByContentContainingIgnoreCase(String contentFragment);
+
     @EntityGraph(attributePaths = {"task", "author"})
     @Query("select c from TaskComment c where c.id = :id")
     Optional<TaskComment> findByIdWithRelations(@Param("id") Long id);

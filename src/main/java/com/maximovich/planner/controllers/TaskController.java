@@ -3,6 +3,7 @@ package com.maximovich.planner.controllers;
 import com.maximovich.planner.dtos.CachedTaskSearchResult;
 import com.maximovich.planner.dtos.CreateTaskRequest;
 import com.maximovich.planner.dtos.TaskResponse;
+import com.maximovich.planner.dtos.TransactionDiagnosticsResponse;
 import com.maximovich.planner.entities.TaskStatus;
 import com.maximovich.planner.exceptions.ApiErrorResponse;
 import io.swagger.v3.oas.annotations.Operation;
@@ -12,6 +13,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import com.maximovich.planner.services.TaskService;
+import com.maximovich.planner.services.TaskTransactionDiagnosticsService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.Positive;
@@ -42,9 +44,14 @@ import org.springframework.web.bind.annotation.RestController;
 public class TaskController {
 
     private final TaskService taskService;
+    private final TaskTransactionDiagnosticsService taskTransactionDiagnosticsService;
 
-    public TaskController(TaskService taskService) {
+    public TaskController(
+        TaskService taskService,
+        TaskTransactionDiagnosticsService taskTransactionDiagnosticsService
+    ) {
         this.taskService = taskService;
+        this.taskTransactionDiagnosticsService = taskTransactionDiagnosticsService;
     }
 
     @Operation(summary = "Create task", description = "Creates a new task")
@@ -173,6 +180,30 @@ public class TaskController {
         Long id
     ) {
         taskService.delete(id);
+    }
+
+    @Operation(
+        summary = "Demonstrate partial persistence without shared transaction",
+        description = """
+            Runs a failing multi-step write without method-level transaction
+            and returns what remained in the database
+            """
+    )
+    @PostMapping("/diagnostics/transactions/without-transaction")
+    public TransactionDiagnosticsResponse demonstrateWithoutTransaction() {
+        return taskTransactionDiagnosticsService.demonstrateWithoutTransaction();
+    }
+
+    @Operation(
+        summary = "Demonstrate rollback with shared transaction",
+        description = """
+            Runs the same failing multi-step write inside @Transactional
+            and returns the database state after rollback
+            """
+    )
+    @PostMapping("/diagnostics/transactions/with-transaction")
+    public TransactionDiagnosticsResponse demonstrateWithTransaction() {
+        return taskTransactionDiagnosticsService.demonstrateWithTransaction();
     }
 
     private ResponseEntity<Page<TaskResponse>> toResponse(CachedTaskSearchResult result) {
