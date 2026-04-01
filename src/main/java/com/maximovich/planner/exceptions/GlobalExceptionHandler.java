@@ -30,6 +30,7 @@ import org.springframework.web.servlet.resource.NoResourceFoundException;
 public class GlobalExceptionHandler {
 
     private static final Logger LOG = LoggerFactory.getLogger(GlobalExceptionHandler.class);
+    private static final String REQUEST_VALIDATION_FAILED_MESSAGE = "Request validation failed";
 
     @ExceptionHandler(ResourceNotFoundException.class)
     public ResponseEntity<ApiErrorResponse> handleNotFound(
@@ -85,7 +86,7 @@ public class GlobalExceptionHandler {
         return buildResponse(
             HttpStatus.BAD_REQUEST,
             ApiErrorCode.VALIDATION_ERROR,
-            "Request validation failed",
+            REQUEST_VALIDATION_FAILED_MESSAGE,
             request,
             details
         );
@@ -104,7 +105,7 @@ public class GlobalExceptionHandler {
         return buildResponse(
             HttpStatus.BAD_REQUEST,
             ApiErrorCode.VALIDATION_ERROR,
-            "Request validation failed",
+            REQUEST_VALIDATION_FAILED_MESSAGE,
             request,
             details
         );
@@ -122,7 +123,7 @@ public class GlobalExceptionHandler {
         return buildResponse(
             HttpStatus.BAD_REQUEST,
             ApiErrorCode.VALIDATION_ERROR,
-            "Request validation failed",
+            REQUEST_VALIDATION_FAILED_MESSAGE,
             request,
             details
         );

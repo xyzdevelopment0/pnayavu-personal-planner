@@ -164,6 +164,7 @@ public class TaskService {
         Pageable normalizedPageable = normalizePageable(pageable);
         String normalizedProjectName = normalizeText(projectName);
         String normalizedOwnerEmail = normalizeText(ownerEmail);
+        String statusName = status == null ? null : status.name();
         String projectPattern = normalizedProjectName == null ? "%" : "%" + normalizedProjectName + "%";
         TaskSearchIndex.CacheKey key = new TaskSearchIndex.CacheKey(
             strategy,
@@ -182,7 +183,7 @@ public class TaskService {
             : taskRepository.searchIdsWithNative(
                 projectPattern,
                 normalizedOwnerEmail,
-                status == null ? null : status.name(),
+                statusName,
                 normalizedPageable
             );
         List<TaskResponse> content = taskIdsPage.hasContent()
