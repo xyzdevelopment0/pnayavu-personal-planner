@@ -37,7 +37,7 @@ public class GlobalExceptionHandler {
         ResourceNotFoundException ex,
         HttpServletRequest request
     ) {
-        LOG.warn("Resource not found: {}", ex.getMessage());
+        logHandledException(HttpStatus.NOT_FOUND, request, "Resource not found: {}", ex.getMessage());
         return buildResponse(
             HttpStatus.NOT_FOUND,
             ApiErrorCode.RESOURCE_NOT_FOUND,
@@ -51,7 +51,7 @@ public class GlobalExceptionHandler {
         BusinessException ex,
         HttpServletRequest request
     ) {
-        LOG.warn("Business rule violated: {}", ex.getMessage());
+        logHandledException(ex.getStatus(), request, "Business rule violated: {}", ex.getMessage());
         return buildResponse(
             ex.getStatus(),
             ApiErrorCode.BUSINESS_RULE_VIOLATION,
@@ -65,7 +65,7 @@ public class GlobalExceptionHandler {
         IllegalStateException ex,
         HttpServletRequest request
     ) {
-        LOG.warn("Illegal state: {}", ex.getMessage());
+        logHandledException(HttpStatus.BAD_REQUEST, request, "Illegal state: {}", ex.getMessage());
         return buildResponse(
             HttpStatus.BAD_REQUEST,
             ApiErrorCode.BUSINESS_RULE_VIOLATION,
@@ -82,7 +82,7 @@ public class GlobalExceptionHandler {
         List<ApiFieldError> details = ex.getBindingResult().getFieldErrors().stream()
             .map(this::toFieldError)
             .toList();
-        LOG.warn("Request body validation failed: {}", details);
+        logHandledException(HttpStatus.BAD_REQUEST, request, "Request body validation failed: {}", details);
         return buildResponse(
             HttpStatus.BAD_REQUEST,
             ApiErrorCode.VALIDATION_ERROR,
@@ -101,7 +101,7 @@ public class GlobalExceptionHandler {
             .flatMap(result -> result.getResolvableErrors().stream()
                 .map(error -> new ApiFieldError(resolveParameterName(result), error.getDefaultMessage())))
             .toList();
-        LOG.warn("Handler method validation failed: {}", details);
+        logHandledException(HttpStatus.BAD_REQUEST, request, "Handler method validation failed: {}", details);
         return buildResponse(
             HttpStatus.BAD_REQUEST,
             ApiErrorCode.VALIDATION_ERROR,
@@ -119,7 +119,7 @@ public class GlobalExceptionHandler {
         List<ApiFieldError> details = ex.getConstraintViolations().stream()
             .map(violation -> new ApiFieldError(violation.getPropertyPath().toString(), violation.getMessage()))
             .toList();
-        LOG.warn("Constraint violation: {}", details);
+        logHandledException(HttpStatus.BAD_REQUEST, request, "Constraint violation: {}", details);
         return buildResponse(
             HttpStatus.BAD_REQUEST,
             ApiErrorCode.VALIDATION_ERROR,
@@ -134,7 +134,13 @@ public class GlobalExceptionHandler {
         MethodArgumentTypeMismatchException ex,
         HttpServletRequest request
     ) {
-        LOG.warn("Parameter type mismatch for {}: {}", ex.getName(), ex.getValue());
+        logHandledException(
+            HttpStatus.BAD_REQUEST,
+            request,
+            "Parameter type mismatch for {}: {}",
+            ex.getName(),
+            ex.getValue()
+        );
         return buildResponse(
             HttpStatus.BAD_REQUEST,
             ApiErrorCode.INVALID_REQUEST,
@@ -154,7 +160,13 @@ public class GlobalExceptionHandler {
                 .map(Reference::getFieldName)
                 .filter(Objects::nonNull)
                 .collect(Collectors.joining("."));
-            LOG.warn("Invalid JSON value for {}: {}", fieldPath, invalidFormatException.getValue());
+            logHandledException(
+                HttpStatus.BAD_REQUEST,
+                request,
+                "Invalid JSON value for {}: {}",
+                fieldPath,
+                invalidFormatException.getValue()
+            );
             return buildResponse(
                 HttpStatus.BAD_REQUEST,
                 ApiErrorCode.INVALID_REQUEST,
@@ -163,7 +175,7 @@ public class GlobalExceptionHandler {
                 List.of(new ApiFieldError(fieldPath, "Invalid value"))
             );
         }
-        LOG.warn("Malformed JSON request: {}", ex.getMessage());
+        logHandledException(HttpStatus.BAD_REQUEST, request, "Malformed JSON request: {}", ex.getMessage());
         return buildResponse(
             HttpStatus.BAD_REQUEST,
             ApiErrorCode.INVALID_REQUEST,
@@ -177,7 +189,12 @@ public class GlobalExceptionHandler {
         MissingServletRequestParameterException ex,
         HttpServletRequest request
     ) {
-        LOG.warn("Missing request parameter: {}", ex.getParameterName());
+        logHandledException(
+            HttpStatus.BAD_REQUEST,
+            request,
+            "Missing request parameter: {}",
+            ex.getParameterName()
+        );
         return buildResponse(
             HttpStatus.BAD_REQUEST,
             ApiErrorCode.INVALID_REQUEST,
@@ -192,7 +209,12 @@ public class GlobalExceptionHandler {
         DataIntegrityViolationException ex,
         HttpServletRequest request
     ) {
-        LOG.warn("Database constraint violation: {}", ex.getMostSpecificCause().getMessage());
+        logHandledException(
+            HttpStatus.CONFLICT,
+            request,
+            "Database constraint violation: {}",
+            ex.getMostSpecificCause().getMessage()
+        );
         return buildResponse(
             HttpStatus.CONFLICT,
             ApiErrorCode.DATA_INTEGRITY_VIOLATION,
@@ -206,7 +228,7 @@ public class GlobalExceptionHandler {
         HttpRequestMethodNotSupportedException ex,
         HttpServletRequest request
     ) {
-        LOG.warn("Method not allowed: {}", ex.getMethod());
+        logHandledException(HttpStatus.METHOD_NOT_ALLOWED, request, "Method not allowed: {}", ex.getMethod());
         return buildResponse(
             HttpStatus.METHOD_NOT_ALLOWED,
             ApiErrorCode.METHOD_NOT_ALLOWED,
@@ -221,7 +243,7 @@ public class GlobalExceptionHandler {
         HttpServletRequest request
     ) {
         String contentType = ex.getContentType() == null ? "unknown" : ex.getContentType().toString();
-        LOG.warn("Unsupported media type: {}", contentType);
+        logHandledException(HttpStatus.UNSUPPORTED_MEDIA_TYPE, request, "Unsupported media type: {}", contentType);
         return buildResponse(
             HttpStatus.UNSUPPORTED_MEDIA_TYPE,
             ApiErrorCode.UNSUPPORTED_MEDIA_TYPE,
@@ -235,7 +257,7 @@ public class GlobalExceptionHandler {
         Exception ex,
         HttpServletRequest request
     ) {
-        LOG.warn("Endpoint not found: {}", request.getRequestURI());
+        logHandledException(HttpStatus.NOT_FOUND, request, "Endpoint not found: {}", request.getRequestURI());
         return buildResponse(
             HttpStatus.NOT_FOUND,
             ApiErrorCode.ENDPOINT_NOT_FOUND,
@@ -276,6 +298,23 @@ public class GlobalExceptionHandler {
     ) {
         return ResponseEntity.status(status)
             .body(ApiErrorResponse.of(status, code, message, request.getRequestURI(), details));
+    }
+
+    private void logHandledException(
+        HttpStatus status,
+        HttpServletRequest request,
+        String message,
+        Object... arguments
+    ) {
+        LOG.warn("[{} {}] " + message, prependArguments(status.value(), request.getRequestURI(), arguments));
+    }
+
+    private Object[] prependArguments(Object first, Object second, Object[] rest) {
+        Object[] arguments = new Object[rest.length + 2];
+        arguments[0] = first;
+        arguments[1] = second;
+        System.arraycopy(rest, 0, arguments, 2, rest.length);
+        return arguments;
     }
 
     private ApiFieldError toFieldError(FieldError error) {
