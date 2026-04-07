@@ -184,14 +184,7 @@ public class TaskService {
         );
         Page<TaskResponse> cachedPage = taskSearchIndex.get(key).orElse(null);
         if (cachedPage != null) {
-            logSearchCompletion(
-                strategy,
-                normalizedProjectName,
-                normalizedOwnerEmail,
-                status,
-                normalizedPageable,
-                true
-            );
+            logSearchCompletion(strategy, status, normalizedPageable, true);
             return new CachedTaskSearchResult(cachedPage, true);
         }
         Page<TaskResponse> page = strategy == TaskSearchIndex.Strategy.JPQL
@@ -203,7 +196,7 @@ public class TaskService {
                 normalizedPageable
             );
         taskSearchIndex.put(key, page);
-        logSearchCompletion(strategy, normalizedProjectName, normalizedOwnerEmail, status, normalizedPageable, false);
+        logSearchCompletion(strategy, status, normalizedPageable, false);
         return new CachedTaskSearchResult(page, false);
     }
 
@@ -251,18 +244,14 @@ public class TaskService {
 
     private void logSearchCompletion(
         TaskSearchIndex.Strategy strategy,
-        String projectName,
-        String ownerEmail,
         TaskStatus status,
         Pageable pageable,
         boolean cached
     ) {
         LOG.info(
-            "Task search completed: strategy={}, cache={}, projectName={}, ownerEmail={}, status={}, page={}, size={}",
+            "Task search completed: strategy={}, cache={}, status={}, page={}, size={}",
             strategy,
             cached ? "HIT" : "MISS",
-            projectName,
-            ownerEmail,
             status,
             pageable.getPageNumber(),
             pageable.getPageSize()

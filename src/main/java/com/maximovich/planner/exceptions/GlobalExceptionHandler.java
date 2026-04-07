@@ -306,15 +306,11 @@ public class GlobalExceptionHandler {
         String message,
         Object... arguments
     ) {
-        LOG.warn("[{} {}] " + message, prependArguments(status.value(), request.getRequestURI(), arguments));
+        LOG.warn("[{} {}] {}", status.value(), request.getRequestURI(), formatMessage(message, arguments));
     }
 
-    private Object[] prependArguments(Object first, Object second, Object[] rest) {
-        Object[] arguments = new Object[rest.length + 2];
-        arguments[0] = first;
-        arguments[1] = second;
-        System.arraycopy(rest, 0, arguments, 2, rest.length);
-        return arguments;
+    private String formatMessage(String message, Object[] arguments) {
+        return message.formatted(arguments);
     }
 
     private ApiFieldError toFieldError(FieldError error) {
