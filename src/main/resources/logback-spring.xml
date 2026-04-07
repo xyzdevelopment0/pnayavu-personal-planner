@@ -9,7 +9,7 @@
     <property name="sqlLogLevel" value="${SQL_LOG_LEVEL:-DEBUG}"/>
     <property name="sqlBindLogLevel" value="${SQL_BIND_LOG_LEVEL:-TRACE}"/>
     <property name="maxHistory" value="${LOG_MAX_HISTORY:-14}"/>
-    <property name="maxFileSize" value="${LOG_MAX_FILE_SIZE:-10MB}"/>
+    <property name="maxFileSize" value="${LOG_MAX_FILE_SIZE:-10KB}"/>
     <property name="totalSizeCap" value="${LOG_TOTAL_SIZE_CAP:-1GB}"/>
 
     <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">

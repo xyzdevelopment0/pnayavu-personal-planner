@@ -195,8 +195,7 @@ public class TaskService {
             return new CachedTaskSearchResult(cachedPage, true);
         }
         Page<TaskResponse> page = strategy == TaskSearchIndex.Strategy.JPQL
-            ? taskRepository.searchWithJpql(projectPattern, normalizedOwnerEmail, status, normalizedPageable)
-                .map(this::mapSearchRow)
+            ? searchPageWithJpql(projectPattern, normalizedOwnerEmail, status, normalizedPageable)
             : searchWithNative(
                 projectPattern,
                 normalizedOwnerEmail,
@@ -236,6 +235,18 @@ public class TaskService {
                 .toList()
             : List.of();
         return new PageImpl<>(content, pageable, taskIdsPage.getTotalElements());
+    }
+
+    private Page<TaskResponse> searchPageWithJpql(
+        String projectPattern,
+        String ownerEmail,
+        TaskStatus status,
+        Pageable pageable
+    ) {
+        Page<Object[]> rows = status == null
+            ? taskRepository.searchWithJpqlWithoutStatus(projectPattern, ownerEmail, pageable)
+            : taskRepository.searchWithJpql(projectPattern, ownerEmail, status, pageable);
+        return rows.map(this::mapSearchRow);
     }
 
     private void logSearchCompletion(

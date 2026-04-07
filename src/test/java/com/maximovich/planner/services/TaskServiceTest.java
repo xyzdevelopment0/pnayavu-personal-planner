@@ -4,7 +4,6 @@ import com.maximovich.planner.components.TaskSearchIndex;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
@@ -58,10 +57,9 @@ class TaskServiceTest {
     void shouldNormalizeSearchParamsAndReuseCacheAcrossCaseVariations() {
         Pageable pageable = PageRequest.of(0, 10);
 
-        when(taskRepository.searchWithJpql(
+        when(taskRepository.searchWithJpqlWithoutStatus(
             eq("%laboratory%"),
             eq("alice@example.com"),
-            isNull(),
             argThat(value -> value != null && value.getPageNumber() == 0 && value.getPageSize() == 10)
         )).thenReturn(new PageImpl<>(List.of(), pageable, 0));
 
@@ -71,10 +69,9 @@ class TaskServiceTest {
         assertThat(first.cached()).isFalse();
         assertThat(second.cached()).isTrue();
 
-        verify(taskRepository, times(1)).searchWithJpql(
+        verify(taskRepository, times(1)).searchWithJpqlWithoutStatus(
             eq("%laboratory%"),
             eq("alice@example.com"),
-            isNull(),
             argThat(value -> value != null && value.getPageNumber() == 0 && value.getPageSize() == 10)
         );
         verifyNoMoreInteractions(taskRepository);
