@@ -9,8 +9,11 @@ import com.maximovich.planner.entities.TaskStatus;
 import com.maximovich.planner.repositories.TaskRepository;
 import com.maximovich.planner.services.TaskService;
 import java.util.LinkedHashSet;
+import jakarta.persistence.EntityManagerFactory;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.hibernate.SessionFactory;
+import org.hibernate.stat.Statistics;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
@@ -36,9 +39,13 @@ class TaskSearchIntegrationTest {
     @Autowired
     private TaskSearchIndex taskSearchIndex;
 
+    @Autowired
+    private EntityManagerFactory entityManagerFactory;
+
     @BeforeEach
     void setUp() {
         taskSearchIndex.clear();
+        entityManagerFactory.unwrap(SessionFactory.class).getStatistics().clear();
     }
 
     @Test
@@ -86,6 +93,22 @@ class TaskSearchIntegrationTest {
         assertThat(nativeQuery.page().getContent())
             .extracting(TaskResponse::id)
             .containsExactlyElementsOf(jpql.page().getContent().stream().map(TaskResponse::id).toList());
+    }
+
+    @Test
+    void shouldLoadSmallFirstJpqlPageWithSingleSelect() {
+        Statistics statistics = entityManagerFactory.unwrap(SessionFactory.class).getStatistics();
+
+        var result = taskService.searchWithJpql(
+            "laboratory",
+            "alice@example.com",
+            TaskStatus.TODO,
+            PageRequest.of(0, 10)
+        );
+
+        assertThat(result.cached()).isFalse();
+        assertThat(result.page().getTotalElements()).isEqualTo(1);
+        assertThat(statistics.getPrepareStatementCount()).isEqualTo(1);
     }
 
     @Test

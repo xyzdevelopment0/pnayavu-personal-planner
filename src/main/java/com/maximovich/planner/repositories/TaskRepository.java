@@ -1,7 +1,7 @@
 package com.maximovich.planner.repositories;
 
-import com.maximovich.planner.entities.TaskStatus;
 import com.maximovich.planner.entities.Task;
+import com.maximovich.planner.entities.TaskStatus;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
@@ -31,13 +31,26 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
 
     @Query(
         value = """
-            select t.id
+            select
+                t.id,
+                t.title,
+                t.description,
+                t.status,
+                t.dueDate,
+                p.id,
+                a.id,
+                coalesce(function('string_agg', cast(tag.id as string), ','), ''),
+                t.createdAt,
+                t.updatedAt
             from Task t
             join t.project p
             join p.owner o
+            join t.assignee a
+            left join t.tags tag
             where lower(p.name) like :projectPattern
               and (:ownerEmail is null or lower(o.email) = :ownerEmail)
-              and t.status = :status
+              and (:status is null or t.status = :status)
+            group by t.id, t.title, t.description, t.status, t.dueDate, p.id, a.id, t.createdAt, t.updatedAt
             order by t.id
             """,
         countQuery = """
@@ -47,38 +60,13 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
             join p.owner o
             where lower(p.name) like :projectPattern
               and (:ownerEmail is null or lower(o.email) = :ownerEmail)
-              and t.status = :status
+              and (:status is null or t.status = :status)
             """
     )
-    Page<Long> searchIdsWithJpql(
+    Page<Object[]> searchWithJpql(
         @Param("projectPattern") String projectPattern,
         @Param("ownerEmail") String ownerEmail,
         @Param("status") TaskStatus status,
-        Pageable pageable
-    );
-
-    @Query(
-        value = """
-            select t.id
-            from Task t
-            join t.project p
-            join p.owner o
-            where lower(p.name) like :projectPattern
-              and (:ownerEmail is null or lower(o.email) = :ownerEmail)
-            order by t.id
-            """,
-        countQuery = """
-            select count(t.id)
-            from Task t
-            join t.project p
-            join p.owner o
-            where lower(p.name) like :projectPattern
-              and (:ownerEmail is null or lower(o.email) = :ownerEmail)
-            """
-    )
-    Page<Long> searchIdsWithJpqlWithoutStatus(
-        @Param("projectPattern") String projectPattern,
-        @Param("ownerEmail") String ownerEmail,
         Pageable pageable
     );
 

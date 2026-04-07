@@ -16,20 +16,28 @@ import com.maximovich.planner.repositories.ProjectRepository;
 import com.maximovich.planner.repositories.TagRepository;
 import com.maximovich.planner.repositories.TaskRepository;
 import com.maximovich.planner.repositories.UserRepository;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.Arrays;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
+import java.util.stream.Collectors;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @Transactional(readOnly = true)
 public class TaskService {
+
+    private static final Logger LOG = LoggerFactory.getLogger(TaskService.class);
 
     private final TaskRepository taskRepository;
     private final ProjectRepository projectRepository;
@@ -176,24 +184,27 @@ public class TaskService {
         );
         Page<TaskResponse> cachedPage = taskSearchIndex.get(key).orElse(null);
         if (cachedPage != null) {
+            logSearchCompletion(
+                strategy,
+                normalizedProjectName,
+                normalizedOwnerEmail,
+                status,
+                normalizedPageable,
+                true
+            );
             return new CachedTaskSearchResult(cachedPage, true);
         }
-        Page<Long> taskIdsPage = strategy == TaskSearchIndex.Strategy.JPQL
-            ? searchIdsWithJpql(projectPattern, normalizedOwnerEmail, status, normalizedPageable)
-            : taskRepository.searchIdsWithNative(
+        Page<TaskResponse> page = strategy == TaskSearchIndex.Strategy.JPQL
+            ? taskRepository.searchWithJpql(projectPattern, normalizedOwnerEmail, status, normalizedPageable)
+                .map(this::mapSearchRow)
+            : searchWithNative(
                 projectPattern,
                 normalizedOwnerEmail,
                 statusName,
                 normalizedPageable
             );
-        List<TaskResponse> content = taskIdsPage.hasContent()
-            ? taskRepository.findByIdInOrderByIdAsc(taskIdsPage.getContent())
-                .stream()
-                .map(taskMapper::toResponse)
-                .toList()
-            : List.of();
-        Page<TaskResponse> page = new PageImpl<>(content, normalizedPageable, taskIdsPage.getTotalElements());
         taskSearchIndex.put(key, page);
+        logSearchCompletion(strategy, normalizedProjectName, normalizedOwnerEmail, status, normalizedPageable, false);
         return new CachedTaskSearchResult(page, false);
     }
 
@@ -203,23 +214,73 @@ public class TaskService {
         return PageRequest.of(page, size);
     }
 
-    private Page<Long> searchIdsWithJpql(
-        String projectPattern,
-        String ownerEmail,
-        TaskStatus status,
-        Pageable pageable
-    ) {
-        if (status == null) {
-            return taskRepository.searchIdsWithJpqlWithoutStatus(projectPattern, ownerEmail, pageable);
-        }
-        return taskRepository.searchIdsWithJpql(projectPattern, ownerEmail, status, pageable);
-    }
-
     private String normalizeText(String value) {
         if (value == null) {
             return null;
         }
         String normalized = value.trim();
         return normalized.isEmpty() ? null : normalized.toLowerCase(Locale.ROOT);
+    }
+
+    private Page<TaskResponse> searchWithNative(
+        String projectPattern,
+        String ownerEmail,
+        String statusName,
+        Pageable pageable
+    ) {
+        Page<Long> taskIdsPage = taskRepository.searchIdsWithNative(projectPattern, ownerEmail, statusName, pageable);
+        List<TaskResponse> content = taskIdsPage.hasContent()
+            ? taskRepository.findByIdInOrderByIdAsc(taskIdsPage.getContent())
+                .stream()
+                .map(taskMapper::toResponse)
+                .toList()
+            : List.of();
+        return new PageImpl<>(content, pageable, taskIdsPage.getTotalElements());
+    }
+
+    private void logSearchCompletion(
+        TaskSearchIndex.Strategy strategy,
+        String projectName,
+        String ownerEmail,
+        TaskStatus status,
+        Pageable pageable,
+        boolean cached
+    ) {
+        LOG.info(
+            "Task search completed: strategy={}, cache={}, projectName={}, ownerEmail={}, status={}, page={}, size={}",
+            strategy,
+            cached ? "HIT" : "MISS",
+            projectName,
+            ownerEmail,
+            status,
+            pageable.getPageNumber(),
+            pageable.getPageSize()
+        );
+    }
+
+    private TaskResponse mapSearchRow(Object[] row) {
+        return new TaskResponse(
+            (Long) row[0],
+            (String) row[1],
+            (String) row[2],
+            (TaskStatus) row[3],
+            (LocalDate) row[4],
+            (Long) row[5],
+            (Long) row[6],
+            parseTagIds((String) row[7]),
+            (LocalDateTime) row[8],
+            (LocalDateTime) row[9]
+        );
+    }
+
+    private Set<Long> parseTagIds(String tagIds) {
+        if (tagIds == null || tagIds.isBlank()) {
+            return Set.of();
+        }
+        return Arrays.stream(tagIds.split(","))
+            .filter(value -> !value.isBlank())
+            .map(Long::valueOf)
+            .sorted()
+            .collect(Collectors.toCollection(LinkedHashSet::new));
     }
 }
