@@ -306,11 +306,10 @@ public class GlobalExceptionHandler {
         String message,
         Object... arguments
     ) {
-        LOG.warn("[{} {}] {}", status.value(), request.getRequestURI(), formatMessage(message, arguments));
-    }
-
-    private String formatMessage(String message, Object[] arguments) {
-        return arguments.length == 0 ? message : message.formatted(arguments);
+        if (LOG.isWarnEnabled()) {
+            String resolvedMessage = arguments.length == 0 ? message : message.formatted(arguments);
+            LOG.warn("[{} {}] {}", status.value(), request.getRequestURI(), resolvedMessage);
+        }
     }
 
     private ApiFieldError toFieldError(FieldError error) {
