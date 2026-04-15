@@ -100,16 +100,17 @@ class TaskServiceTest {
         taskSearchIndex.put(key, new org.springframework.data.domain.PageImpl<>(List.of(taskResponse())));
         Project project = withId(new Project("Planner", "Main", withId(new User("Owner", "owner@example.com"), 1L)), 10L);
         User assignee = withId(new User("Alice", "alice@example.com"), 20L);
+        List<CreateTaskRequest> requests = List.of(
+            new CreateTaskRequest(" First ", null, TaskStatus.TODO, LocalDate.now().plusDays(1), 10L, 20L, Set.of()),
+            new CreateTaskRequest(" Broken ", null, TaskStatus.TODO, LocalDate.now().plusDays(2), 10L, 20L, Set.of(999L))
+        );
         when(projectRepository.findById(10L)).thenReturn(Optional.of(project));
         when(userRepository.findById(20L)).thenReturn(Optional.of(assignee));
         when(taskRepository.save(org.mockito.ArgumentMatchers.any(Task.class)))
             .thenAnswer(invocation -> withId(invocation.getArgument(0), 101L));
         when(tagRepository.findAllById(Set.of(999L))).thenReturn(List.of());
 
-        assertThatThrownBy(() -> taskService.createBulk(List.of(
-            new CreateTaskRequest(" First ", null, TaskStatus.TODO, LocalDate.now().plusDays(1), 10L, 20L, Set.of()),
-            new CreateTaskRequest(" Broken ", null, TaskStatus.TODO, LocalDate.now().plusDays(2), 10L, 20L, Set.of(999L))
-        )))
+        assertThatThrownBy(() -> taskService.createBulk(requests))
             .isInstanceOf(BusinessException.class)
             .hasMessage("One or more tags were not found");
 

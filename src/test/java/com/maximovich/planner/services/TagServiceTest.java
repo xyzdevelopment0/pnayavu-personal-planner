@@ -46,8 +46,9 @@ class TagServiceTest {
     @Test
     void createShouldRejectDuplicateTagNames() {
         when(tagRepository.existsByNameIgnoreCase("urgent")).thenReturn(true);
+        TagRequest request = new TagRequest("  Urgent ");
 
-        assertThatThrownBy(() -> tagService.create(new TagRequest("  Urgent ")))
+        assertThatThrownBy(() -> tagService.create(request))
             .isInstanceOf(BusinessException.class)
             .hasMessage("Tag urgent already exists");
     }

@@ -310,7 +310,7 @@ public class GlobalExceptionHandler {
     }
 
     private String formatMessage(String message, Object[] arguments) {
-        return message.formatted(arguments);
+        return arguments.length == 0 ? message : message.formatted(arguments);
     }
 
     private ApiFieldError toFieldError(FieldError error) {
