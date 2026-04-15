@@ -10,6 +10,7 @@ import com.maximovich.planner.repositories.TaskRepository;
 import com.maximovich.planner.entities.User;
 import com.maximovich.planner.repositories.UserRepository;
 import java.util.List;
+import java.util.Optional;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -34,7 +35,7 @@ public class TaskCommentService {
     @Transactional
     public TaskCommentResponse create(TaskCommentRequest request) {
         TaskComment comment = new TaskComment(
-            request.content().trim(),
+            trimContent(request.content()),
             getTask(request.taskId()),
             getAuthor(request.authorId())
         );
@@ -52,7 +53,7 @@ public class TaskCommentService {
     @Transactional
     public TaskCommentResponse update(Long id, TaskCommentRequest request) {
         TaskComment comment = getEntity(id);
-        comment.update(request.content().trim(), getTask(request.taskId()), getAuthor(request.authorId()));
+        comment.update(trimContent(request.content()), getTask(request.taskId()), getAuthor(request.authorId()));
         return TaskCommentResponse.fromEntity(getEntityWithRelations(id));
     }
 
@@ -77,5 +78,9 @@ public class TaskCommentService {
     private User getAuthor(Long authorId) {
         return userRepository.findById(authorId)
             .orElseThrow(() -> new ResourceNotFoundException("User", authorId));
+    }
+
+    private String trimContent(String content) {
+        return Optional.ofNullable(content).map(String::trim).orElseThrow();
     }
 }

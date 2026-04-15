@@ -3,7 +3,6 @@ package com.maximovich.planner.controllers;
 import com.maximovich.planner.dtos.CachedTaskSearchResult;
 import com.maximovich.planner.dtos.CreateTaskRequest;
 import com.maximovich.planner.dtos.TaskResponse;
-import com.maximovich.planner.dtos.TransactionDiagnosticsResponse;
 import com.maximovich.planner.entities.TaskStatus;
 import com.maximovich.planner.exceptions.ApiErrorResponse;
 import io.swagger.v3.oas.annotations.Operation;
@@ -13,9 +12,9 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import com.maximovich.planner.services.TaskService;
-import com.maximovich.planner.services.TaskTransactionDiagnosticsService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
 import java.util.List;
@@ -44,14 +43,9 @@ import org.springframework.web.bind.annotation.RestController;
 public class TaskController {
 
     private final TaskService taskService;
-    private final TaskTransactionDiagnosticsService taskTransactionDiagnosticsService;
 
-    public TaskController(
-        TaskService taskService,
-        TaskTransactionDiagnosticsService taskTransactionDiagnosticsService
-    ) {
+    public TaskController(TaskService taskService) {
         this.taskService = taskService;
-        this.taskTransactionDiagnosticsService = taskTransactionDiagnosticsService;
     }
 
     @Operation(summary = "Create task", description = "Creates a new task")
@@ -65,6 +59,22 @@ public class TaskController {
     @ResponseStatus(HttpStatus.CREATED)
     public TaskResponse create(@Valid @RequestBody CreateTaskRequest request) {
         return taskService.create(request);
+    }
+
+    @Operation(
+        summary = "Create tasks in bulk",
+        description = "Creates several tasks in one business operation and one transaction"
+    )
+    @ApiResponse(responseCode = "201", description = "Tasks created")
+    @ApiResponse(
+        responseCode = "404",
+        description = "Project, assignee or one of tags not found",
+        content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))
+    )
+    @PostMapping("/bulk")
+    @ResponseStatus(HttpStatus.CREATED)
+    public List<TaskResponse> createBulk(@Valid @NotEmpty @RequestBody List<@Valid CreateTaskRequest> requests) {
+        return taskService.createBulk(requests);
     }
 
     @Operation(summary = "Get task by id", description = "Returns a task by identifier")
@@ -180,30 +190,6 @@ public class TaskController {
         Long id
     ) {
         taskService.delete(id);
-    }
-
-    @Operation(
-        summary = "Demonstrate partial persistence without shared transaction",
-        description = """
-            Runs a failing multi-step write without method-level transaction
-            and returns what remained in the database
-            """
-    )
-    @PostMapping("/diagnostics/transactions/without-transaction")
-    public TransactionDiagnosticsResponse demonstrateWithoutTransaction() {
-        return taskTransactionDiagnosticsService.demonstrateWithoutTransaction();
-    }
-
-    @Operation(
-        summary = "Demonstrate rollback with shared transaction",
-        description = """
-            Runs the same failing multi-step write inside @Transactional
-            and returns the database state after rollback
-            """
-    )
-    @PostMapping("/diagnostics/transactions/with-transaction")
-    public TransactionDiagnosticsResponse demonstrateWithTransaction() {
-        return taskTransactionDiagnosticsService.demonstrateWithTransaction();
     }
 
     private ResponseEntity<Page<TaskResponse>> toResponse(CachedTaskSearchResult result) {

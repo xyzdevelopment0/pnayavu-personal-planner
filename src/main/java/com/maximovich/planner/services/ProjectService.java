@@ -9,6 +9,7 @@ import com.maximovich.planner.repositories.ProjectRepository;
 import com.maximovich.planner.entities.User;
 import com.maximovich.planner.repositories.UserRepository;
 import java.util.List;
+import java.util.Optional;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -79,6 +80,6 @@ public class ProjectService {
     }
 
     private String trimDescription(String description) {
-        return description == null ? null : description.trim();
+        return Optional.ofNullable(description).map(String::trim).orElse(null);
     }
 }

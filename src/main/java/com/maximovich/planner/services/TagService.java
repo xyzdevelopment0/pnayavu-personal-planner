@@ -7,9 +7,9 @@ import com.maximovich.planner.entities.Tag;
 import com.maximovich.planner.dtos.TagRequest;
 import com.maximovich.planner.dtos.TagResponse;
 import com.maximovich.planner.repositories.TagRepository;
-import com.maximovich.planner.entities.Task;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Optional;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -61,9 +61,7 @@ public class TagService {
     @Transactional
     public void delete(Long id) {
         Tag tag = tagRepository.findByIdWithTasks(id).orElseThrow(() -> new ResourceNotFoundException("Tag", id));
-        for (Task task : new LinkedHashSet<>(tag.getTasks())) {
-            task.removeTag(tag);
-        }
+        new LinkedHashSet<>(tag.getTasks()).stream().forEach(task -> task.removeTag(tag));
         tagRepository.delete(tag);
         taskSearchIndex.clear();
     }
@@ -73,6 +71,6 @@ public class TagService {
     }
 
     private String normalizeName(String name) {
-        return name.trim().toLowerCase();
+        return Optional.ofNullable(name).map(String::trim).map(String::toLowerCase).orElseThrow();
     }
 }

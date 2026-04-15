@@ -22,6 +22,7 @@ import java.util.Arrays;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import org.springframework.data.domain.Page;
@@ -64,18 +65,20 @@ public class TaskService {
 
     @Transactional
     public TaskResponse create(CreateTaskRequest request) {
-        Task task = new Task(
-            request.title().trim(),
-            trimDescription(request.description()),
-            request.status(),
-            request.dueDate(),
-            getProject(request.projectId()),
-            getAssignee(request.assigneeId())
-        );
-        task.replaceTags(getTags(request.tagIds()));
-        TaskResponse response = taskMapper.toResponse(taskRepository.save(task));
+        TaskResponse response = taskMapper.toResponse(taskRepository.save(buildTask(request)));
         taskSearchIndex.clear();
         return response;
+    }
+
+    @Transactional
+    public List<TaskResponse> createBulk(List<CreateTaskRequest> requests) {
+        List<TaskResponse> responses = requests.stream()
+            .map(this::buildTask)
+            .map(taskRepository::save)
+            .map(taskMapper::toResponse)
+            .toList();
+        taskSearchIndex.clear();
+        return responses;
     }
 
     public TaskResponse getById(Long id) {
@@ -107,15 +110,7 @@ public class TaskService {
     @Transactional
     public TaskResponse update(Long id, CreateTaskRequest request) {
         Task task = getEntity(id);
-        task.update(
-            request.title().trim(),
-            trimDescription(request.description()),
-            request.status(),
-            request.dueDate(),
-            getProject(request.projectId()),
-            getAssignee(request.assigneeId())
-        );
-        task.replaceTags(getTags(request.tagIds()));
+        applyRequest(task, request);
         TaskResponse response = taskMapper.toResponse(getEntityWithRelations(id));
         taskSearchIndex.clear();
         return response;
@@ -147,19 +142,47 @@ public class TaskService {
     }
 
     private Set<Tag> getTags(Set<Long> tagIds) {
-        if (tagIds == null || tagIds.isEmpty()) {
+        Set<Long> normalizedIds = Optional.ofNullable(tagIds)
+            .filter(ids -> !ids.isEmpty())
+            .map(LinkedHashSet::new)
+            .orElseGet(LinkedHashSet::new);
+        if (normalizedIds.isEmpty()) {
             return new LinkedHashSet<>();
         }
-        Set<Long> normalizedIds = new LinkedHashSet<>(tagIds);
         List<Tag> tags = tagRepository.findAllById(normalizedIds);
         if (tags.size() != normalizedIds.size()) {
             throw new BusinessException("One or more tags were not found");
         }
-        return new LinkedHashSet<>(tags);
+        return tags.stream().collect(Collectors.toCollection(LinkedHashSet::new));
     }
 
     private String trimDescription(String description) {
-        return description == null ? null : description.trim();
+        return Optional.ofNullable(description).map(String::trim).orElse(null);
+    }
+
+    private Task buildTask(CreateTaskRequest request) {
+        Task task = new Task(
+            request.title().trim(),
+            trimDescription(request.description()),
+            request.status(),
+            request.dueDate(),
+            getProject(request.projectId()),
+            getAssignee(request.assigneeId())
+        );
+        task.replaceTags(getTags(request.tagIds()));
+        return task;
+    }
+
+    private void applyRequest(Task task, CreateTaskRequest request) {
+        task.update(
+            request.title().trim(),
+            trimDescription(request.description()),
+            request.status(),
+            request.dueDate(),
+            getProject(request.projectId()),
+            getAssignee(request.assigneeId())
+        );
+        task.replaceTags(getTags(request.tagIds()));
     }
 
     private CachedTaskSearchResult search(
