@@ -11,22 +11,22 @@ import java.util.Set;
 
 @Schema(description = "Request for creating or updating a task")
 public record CreateTaskRequest(
-    @Schema(description = "Task title", example = "Prepare Swagger documentation")
+    @Schema(description = "Task title", example = "Demo bulk success 1")
     @NotBlank
     @Size(max = 120)
     String title,
-    @Schema(description = "Task description", example = "Document all REST endpoints")
+    @Schema(description = "Task description", example = "First valid task")
     @Size(max = 500)
     String description,
     @Schema(description = "Task status. Defaults to TODO when omitted", example = "TODO")
     TaskStatus status,
-    @Schema(description = "Task due date", example = "2026-04-10")
+    @Schema(description = "Task due date", example = "2026-05-14")
     LocalDate dueDate,
     @Schema(description = "Project identifier", example = "1")
     @NotNull
     @Positive
     Long projectId,
-    @Schema(description = "Assignee user identifier", example = "2")
+    @Schema(description = "Assignee user identifier", example = "1")
     @NotNull
     @Positive
     Long assigneeId,

@@ -10,17 +10,17 @@ import java.util.Set;
 public record TaskResponse(
     @Schema(description = "Task identifier", example = "1")
     Long id,
-    @Schema(description = "Task title", example = "Prepare Swagger documentation")
+    @Schema(description = "Task title", example = "Demo bulk success 1")
     String title,
-    @Schema(description = "Task description", example = "Document all REST endpoints")
+    @Schema(description = "Task description", example = "First valid task")
     String description,
     @Schema(description = "Task status", example = "TODO")
     TaskStatus status,
-    @Schema(description = "Task due date", example = "2026-04-10")
+    @Schema(description = "Task due date", example = "2026-05-14")
     LocalDate dueDate,
     @Schema(description = "Project identifier", example = "1")
     Long projectId,
-    @Schema(description = "Assignee user identifier", example = "2")
+    @Schema(description = "Assignee user identifier", example = "1")
     Long assigneeId,
     @Schema(description = "Identifiers of related tags", example = "[1, 2]")
     Set<Long> tagIds,
